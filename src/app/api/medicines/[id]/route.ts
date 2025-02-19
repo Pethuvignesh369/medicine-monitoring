@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Define the correct param type for Next.js App Router
-type Params = { id: string };
-
 // GET a single medicine by ID
-export async function GET(
-  req: Request,
-  context: { params: Params }
-) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params; // Awaiting params
+
   try {
     const medicine = await prisma.medicine.findUnique({
-      where: { id: parseInt(context.params.id, 10) },
+      where: { id: parseInt(id, 10) },
     });
 
     if (!medicine) {
@@ -25,15 +21,14 @@ export async function GET(
 }
 
 // UPDATE a medicine
-export async function PUT(
-  req: Request,
-  context: { params: Params }
-) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params; // Awaiting params
+
   try {
     const { name, stock, weeklyRequirement } = await req.json();
 
     const updatedMedicine = await prisma.medicine.update({
-      where: { id: parseInt(context.params.id, 10) },
+      where: { id: parseInt(id, 10) },
       data: { name, stock, weeklyRequirement },
     });
 
@@ -44,13 +39,12 @@ export async function PUT(
 }
 
 // DELETE a medicine
-export async function DELETE(
-  req: Request,
-  context: { params: Params }
-) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params; // Awaiting params
+
   try {
     await prisma.medicine.delete({
-      where: { id: parseInt(context.params.id, 10) },
+      where: { id: parseInt(id, 10) },
     });
 
     return NextResponse.json({ message: "Deleted successfully" });
