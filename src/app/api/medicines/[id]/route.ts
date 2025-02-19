@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+type ParamType = {
+  params: {
+    id: string;
+  };
+};
+
 // GET a single medicine by ID
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: ParamType) {
   try {
     const medicine = await prisma.medicine.findUnique({
       where: { id: parseInt(params.id, 10) }, // Ensure ID is converted to an integer
@@ -19,7 +25,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // UPDATE a medicine
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: ParamType) {
   try {
     const { name, stock, weeklyRequirement } = await req.json();
 
@@ -35,7 +41,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // DELETE a medicine
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: ParamType) {
   try {
     await prisma.medicine.delete({
       where: { id: parseInt(params.id, 10) },
