@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // ✅ GET a single medicine by ID
-export async function GET(req: NextRequest, context: { params: { id?: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id?: string }> }) {
   try {
-    const { id } = await context.params; // ✅ Await params
+    const { id } = await context.params; // ✅ Await params correctly
 
     if (!id) {
       return NextResponse.json({ error: "Medicine ID is required" }, { status: 400 });
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, context: { params: { id?: string } }
 
     const medicine = await prisma.medicine.findUnique({
       where: { id: Number(id) },
-      include: { facility: true }, // Ensure `facility` is the correct relation name
+      include: { facility: true },
     });
 
     if (!medicine) {
@@ -27,17 +27,15 @@ export async function GET(req: NextRequest, context: { params: { id?: string } }
 }
 
 // ✅ UPDATE a medicine
-export async function PUT(req: NextRequest, context: { params: { id?: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id?: string }> }) {
   try {
-    const { id } = await context.params; // ✅ Await params
+    const { id } = await context.params; // ✅ Await params correctly
 
     if (!id) {
       return NextResponse.json({ error: "Medicine ID is required" }, { status: 400 });
     }
 
     const body = await req.json();
-    console.log("Updating Medicine Data:", body);
-
     const { name, stock, weeklyRequirement, expiryDate, facilityId } = body;
 
     if (!name || !stock || !weeklyRequirement || !facilityId) {
@@ -53,7 +51,7 @@ export async function PUT(req: NextRequest, context: { params: { id?: string } }
         expiryDate: expiryDate ? new Date(expiryDate) : null,
         facilityId: Number(facilityId),
       },
-      include: { facility: true }, // Include facility details
+      include: { facility: true },
     });
 
     return NextResponse.json({ message: "Medicine updated successfully", updatedMedicine });
@@ -64,9 +62,9 @@ export async function PUT(req: NextRequest, context: { params: { id?: string } }
 }
 
 // ✅ DELETE a medicine
-export async function DELETE(req: NextRequest, context: { params: { id?: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id?: string }> }) {
   try {
-    const { id } = await context.params; // ✅ Await params
+    const { id } = await context.params; // ✅ Await params correctly
 
     if (!id) {
       return NextResponse.json({ error: "Medicine ID is required" }, { status: 400 });
