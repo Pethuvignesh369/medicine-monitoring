@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -17,14 +17,34 @@ type Medicine = {
   weeklyRequirement: number;
 };
 
+function SearchParamHandler({ setSuccessMessage }: { setSuccessMessage: (msg: string | null) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const success = searchParams.get("success");
+    if (success) {
+      if (success === "added") {
+        setSuccessMessage("Medicine added successfully!");
+      } else if (success === "updated") {
+        setSuccessMessage("Medicine updated successfully!");
+      }
+
+      setTimeout(() => {
+        setSuccessMessage(null);
+        router.replace("/dashboard");
+      }, 3000);
+    }
+  }, [searchParams, router]);
+
+  return null;
+}
+
 export default function DashboardPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const searchParams = useSearchParams();
-  const router = useRouter();
 
   useEffect(() => {
     async function fetchData() {
@@ -34,24 +54,6 @@ export default function DashboardPage() {
     }
     fetchData();
   }, []);
-
-  useEffect(() => {
-    // Check if there's a success message in the URL
-    const success = searchParams.get("success");
-    if (success) {
-      if (success === "added") {
-        setSuccessMessage("Medicine added successfully!");
-      } else if (success === "updated") {
-        setSuccessMessage("Medicine updated successfully!");
-      }
-
-      // Remove query params after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage(null);
-        router.replace("/dashboard");
-      }, 3000);
-    }
-  }, [searchParams, router]);
 
   async function deleteMedicine() {
     if (deleteId !== null) {
@@ -83,6 +85,11 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto p-6">
+      {/* Wrap search param handling in Suspense */}
+      <Suspense fallback={null}>
+        <SearchParamHandler setSuccessMessage={setSuccessMessage} />
+      </Suspense>
+
       {/* Success Alert */}
       {successMessage && (
         <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
