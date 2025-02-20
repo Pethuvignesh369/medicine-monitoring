@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // ✅ Get a single facility by ID
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = await context; // ✅ Await params
+    const { id } = await context.params; // Await params ✅
+
     const facility = await prisma.facility.findUnique({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
     });
 
     if (!facility) {
@@ -20,13 +21,13 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 }
 
 // ✅ Update (Edit) a facility
-export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = await context; // ✅ Await params
+    const { id } = await context.params; // Await params ✅
     const { name, type } = await req.json();
 
     const updatedFacility = await prisma.facility.update({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
       data: { name, type },
     });
 
@@ -37,11 +38,12 @@ export async function PUT(req: NextRequest, context: { params: { id: string } })
 }
 
 // ✅ Delete a facility
-export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = await context; // ✅ Await params
+    const { id } = await context.params; // Await params ✅
+
     await prisma.facility.delete({
-      where: { id: Number(params.id) },
+      where: { id: Number(id) },
     });
 
     return NextResponse.json({ message: "Facility deleted successfully" });
