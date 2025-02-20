@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Package, AlertTriangle, CalendarX } from "lucide-react";
+import { Loader2, Package, AlertTriangle, CalendarX, XCircle } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
+  const [alerts, setAlerts] = useState<{ id: number; message: string }[]>([]);
   const itemsPerPage = 5;
   const router = useRouter();
 
@@ -48,10 +49,31 @@ export default function DashboardPage() {
 
   async function fetchMedicines() {
     setLoading(true);
-    const res = await fetch("/api/medicines");
-    const data = await res.json();
-    setMedicines(data);
+    try {
+      const res = await fetch("/api/medicines");
+      const data = await res.json();
+      setMedicines(data);
+      generateAlerts(data);
+    } catch (error) {
+      console.error("Error fetching medicines:", error);
+    }
     setLoading(false);
+  }
+
+  function generateAlerts(medicines: Medicine[]) {
+    let newAlerts: { id: number; message: string }[] = [];
+    medicines.forEach((med) => {
+      if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
+        newAlerts.push({ id: med.id, message: `⚠️ ${med.name} is expired!` });
+      } else if (med.stock < med.weeklyRequirement) {
+        newAlerts.push({ id: med.id, message: `⚠️ ${med.name} is running low on stock!` });
+      }
+    });
+    setAlerts(newAlerts);
+  }
+
+  function dismissAlert(id: number) {
+    setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== id));
   }
 
   function checkScreenSize() {
@@ -87,10 +109,31 @@ export default function DashboardPage() {
   const currentMedicines = medicines.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
-
-    
     <div className="container mx-auto p-4">
-      
+      {/* Automated Alerts Section */}
+      {alerts.length > 0 && (
+        <div className="mb-4">
+          <h2 className="text-lg font-bold mb-2">🚨 Automated Alerts</h2>
+          {alerts.map((alert) => (
+            <Alert 
+              key={alert.id} 
+              className="flex items-center justify-between bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 mb-2"
+            >
+              <div>
+                <AlertTitle>Alert</AlertTitle>
+                <AlertDescription>{alert.message}</AlertDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => dismissAlert(alert.id)}
+              >
+                <XCircle className="w-5 h-5 text-gray-600" />
+              </Button>
+            </Alert>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
@@ -105,28 +148,23 @@ export default function DashboardPage() {
             </Alert>
           )}
 
-
-{/* Statistics Badges */}
-<div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
-  <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
-    <Package size={14} /> <span>Total Stock:</span> {totalStock(medicines)}
-  </Badge>
-  <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
-    <AlertTriangle size={14} /> <span>Low Stock:</span> {lowStockCount(medicines)}
-  </Badge>
-  <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
-    <CalendarX size={14} /> <span>Expiring Soon:</span> {expiringSoonCount(medicines)}
-  </Badge>
-  <Badge className="px-3 py-1 text-xs bg-gray-800 text-white flex items-center gap-1">
-    <CalendarX size={14} /> <span>Expired:</span> {expiredCount(medicines)}
-  </Badge>
-</div>
-
-
+          {/* Statistics Badges */}
+          <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
+            <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
+              <Package size={14} /> <span>Total Stock:</span> {totalStock(medicines)}
+            </Badge>
+            <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
+              <AlertTriangle size={14} /> <span>Low Stock:</span> {lowStockCount(medicines)}
+            </Badge>
+            <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
+              <CalendarX size={14} /> <span>Expiring Soon:</span> {expiringSoonCount(medicines)}
+            </Badge>
+            <Badge className="px-3 py-1 text-xs bg-gray-800 text-white flex items-center gap-1">
+              <CalendarX size={14} /> <span>Expired:</span> {expiredCount(medicines)}
+            </Badge>
+          </div>
 
           {medicines.length > 0 && <MedicineStockChart medicines={medicines} />}
-
-          
 
           <Card className="shadow-lg">
             <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center">
@@ -177,34 +215,33 @@ export default function DashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-  {currentMedicines.map((med) => (
-    <TableRow key={med.id}>
-      <TableCell>{med.name}</TableCell>
-      <TableCell>{med.stock}</TableCell>
-      <TableCell>{med.weeklyRequirement}</TableCell>
-      <TableCell className={getExpiryColor(med.expiryDate)}>
-        {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-      </TableCell>
-      <TableCell>
-        {typeof med.facility === "object" ? med.facility.name : med.facility}
-      </TableCell>
-      <TableCell>
-        <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-          {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-        </Badge>
-      </TableCell>
-      <TableCell className="space-x-2">
-        <Link href={`/dashboard/edit/${med.id}`}>
-          <Button size="sm" variant="outline">Edit</Button>
-        </Link>
-        <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>
-          Delete
-        </Button>
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
-
+                      {currentMedicines.map((med) => (
+                        <TableRow key={med.id}>
+                          <TableCell>{med.name}</TableCell>
+                          <TableCell>{med.stock}</TableCell>
+                          <TableCell>{med.weeklyRequirement}</TableCell>
+                          <TableCell className={getExpiryColor(med.expiryDate)}>
+                            {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {typeof med.facility === "object" ? med.facility.name : med.facility}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="space-x-2">
+                            <Link href={`/dashboard/edit/${med.id}`}>
+                              <Button size="sm" variant="outline">Edit</Button>
+                            </Link>
+                            <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
                   </Table>
                 </div>
               )}
@@ -215,30 +252,25 @@ export default function DashboardPage() {
       )}
 
       {/* Delete Confirmation Modal */}
-<Dialog open={isModalOpen} onOpenChange={closeModal}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Confirm Delete</DialogTitle>
-    </DialogHeader>
-    <p>Are you sure you want to delete this medicine?</p>
-    <DialogFooter className="mt-4 flex justify-end space-x-2">
-      <Button variant="outline" onClick={closeModal}>
-        Cancel
-      </Button>
-      <Button variant="destructive" onClick={deleteMedicine}>
-        Delete
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+      <Dialog open={isModalOpen} onOpenChange={closeModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this medicine?</p>
+          <DialogFooter className="mt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteMedicine}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-
-    
   );
 }
-
-
-
 
 // ✅ Helper functions
 function formatDate(dateString: string) {
@@ -277,4 +309,4 @@ function expiringSoonCount(medicines: Medicine[]) {
 function expiredCount(medicines: Medicine[]) {
     return medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
   }
-  
+
