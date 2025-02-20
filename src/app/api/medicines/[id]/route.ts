@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET a single medicine by ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params; // ✅ Correct way to extract params
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const { id } = await props.params; // ✅ Await params before using it
 
   const medicine = await prisma.medicine.findUnique({
     where: { id: Number(id) },
@@ -17,9 +17,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // UPDATE a medicine
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await props.params; // ✅ Await params
+
     const { name, stock, weeklyRequirement } = await req.json();
 
     const updatedMedicine = await prisma.medicine.update({
@@ -34,9 +35,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE a medicine
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await props.params; // ✅ Await params
 
     await prisma.medicine.delete({
       where: { id: Number(id) },
