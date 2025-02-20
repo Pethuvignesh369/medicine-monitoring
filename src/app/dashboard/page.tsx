@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react"; // Import spinner icon from lucide-react
+import { Loader2 } from "lucide-react"; 
 
 type Medicine = {
   id: number;
@@ -18,13 +18,22 @@ type Medicine = {
   weeklyRequirement: number;
 };
 
-export default function DashboardPageContent() {
+export default function DashboardPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const searchParams = useSearchParams(); // Using inside Client Component ✅
+
+  // ✅ Workaround for useSearchParams error
+  const [searchParams, setSearchParams] = useState<string | null>(null);
+  const params = useSearchParams();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSearchParams(params.get("success"));
+    }
+  }, [params]);
 
   useEffect(() => {
     async function fetchData() {
@@ -37,11 +46,9 @@ export default function DashboardPageContent() {
     fetchData();
   }, []);
 
-  // Read URL search params (Fix for Next.js suspense issue)
   useEffect(() => {
-    const successParam = searchParams.get("success");
-    if (successParam) {
-      setSuccessMessage(successParam === "updated" ? "Medicine updated successfully!" : null);
+    if (searchParams) {
+      setSuccessMessage("Medicine updated successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     }
   }, [searchParams]);
