@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
+  // Fetch Medicines
   async function fetchMedicines() {
     setLoading(true);
     const res = await fetch("/api/medicines");
@@ -46,16 +47,19 @@ export default function DashboardPage() {
     fetchMedicines();
   }, []);
 
+  // Open Delete Confirmation Modal
   function openModal(id: number) {
     setDeleteId(id);
     setIsModalOpen(true);
   }
 
+  // Close Delete Confirmation Modal
   function closeModal() {
     setDeleteId(null);
     setIsModalOpen(false);
   }
 
+  // Delete Medicine
   async function deleteMedicine() {
     if (deleteId !== null) {
       const res = await fetch(`/api/medicines/${deleteId}`, { method: "DELETE" });
@@ -122,7 +126,6 @@ export default function DashboardPage() {
                           </TableCell>
                           <TableCell>
                             {typeof med.facility === "object" ? med.facility.name : med.facility}
-                
                           </TableCell>
                           <TableCell>
                             <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
@@ -147,37 +150,24 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-
-              <div className="md:hidden space-y-4">
-                {medicines.length > 0 ? (
-                  medicines.map((med) => (
-                    <Card key={med.id} className="p-4 shadow-md">
-                      <h2 className="text-lg font-bold">{med.name}</h2>
-                      <p><strong>Stock:</strong> {med.stock}</p>
-                      <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
-                      <p className={getExpiryColor(med.expiryDate)}>
-                        <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                      </p>
-                      <p><strong>Facility:</strong> {typeof med.facility === "object" ? med.facility.name : med.facility}</p>
-                      <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                        {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                      </Badge>
-                      <div className="mt-3 flex space-x-2">
-                        <Link href={`/dashboard/edit/${med.id}`}>
-                          <Button size="sm" variant="outline">Edit</Button>
-                        </Link>
-                        <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
-                      </div>
-                    </Card>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500">No medicines found.</p>
-                )}
-              </div>
             </CardContent>
           </Card>
         </>
       )}
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this medicine?</p>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={closeModal}>Cancel</Button>
+            <Button variant="destructive" onClick={deleteMedicine}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
