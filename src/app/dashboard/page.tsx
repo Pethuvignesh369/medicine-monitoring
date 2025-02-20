@@ -106,18 +106,23 @@ export default function DashboardPage() {
           )}
 
 
-  {/* Statistics Badges */}
-  <div className="absolute top-4 right-4 flex flex-wrap md:space-x-2 space-y-1 md:space-y-0 z-10">
-  <Badge className="px-2 py-0.5 text-xs bg-blue-600 text-white flex items-center gap-1">
-    <Package size={12} /> <span>Total Stock:</span> {totalStock(medicines)}
+{/* Statistics Badges */}
+<div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
+  <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
+    <Package size={14} /> <span>Total Stock:</span> {totalStock(medicines)}
   </Badge>
-  <Badge className="px-2 py-0.5 text-xs bg-yellow-600 text-white flex items-center gap-1">
-    <AlertTriangle size={12} /> <span>Low Stock:</span> {lowStockCount(medicines)}
+  <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
+    <AlertTriangle size={14} /> <span>Low Stock:</span> {lowStockCount(medicines)}
   </Badge>
-  <Badge className="px-2 py-0.5 text-xs bg-red-600 text-white flex items-center gap-1">
-    <CalendarX size={12} /> <span>Expiring Soon:</span> {expiringSoonCount(medicines)}
+  <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
+    <CalendarX size={14} /> <span>Expiring Soon:</span> {expiringSoonCount(medicines)}
+  </Badge>
+  <Badge className="px-3 py-1 text-xs bg-gray-800 text-white flex items-center gap-1">
+    <CalendarX size={14} /> <span>Expired:</span> {expiredCount(medicines)}
   </Badge>
 </div>
+
+
 
           {medicines.length > 0 && <MedicineStockChart medicines={medicines} />}
 
@@ -261,5 +266,15 @@ function lowStockCount(medicines: Medicine[]) {
 }
 
 function expiringSoonCount(medicines: Medicine[]) {
-  return medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
-}
+    const today = new Date();
+    return medicines.filter(med => 
+      med.expiryDate && 
+      new Date(med.expiryDate) > today && // Should not be expired
+      new Date(med.expiryDate) <= new Date(today.setDate(today.getDate() + 7)) // Expiring within 7 days
+    ).length;
+  }
+
+function expiredCount(medicines: Medicine[]) {
+    return medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
+  }
+  
