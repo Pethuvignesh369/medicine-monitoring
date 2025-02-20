@@ -245,9 +245,12 @@ export default function DashboardPage() {
                   </Table>
                 </div>
               )}
+
               <Pagination currentPage={currentPage} totalItems={medicines.length} itemsPerPage={itemsPerPage} setPage={setCurrentPage} />
+              
             </CardContent>
           </Card>
+          <div className="container mx-auto p-4 pb-16"/> {/* Added pb-16 for spacing */} 
         </>
       )}
 
@@ -268,6 +271,24 @@ export default function DashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+    {/* Sleek Black Footer */}
+<footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
+  <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+    🏠 <span>Home</span>
+  </Link>
+  <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+    📊 <span>Dashboard</span>
+  </Link>
+  <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+    ➕ <span>Add Medicine</span>
+  </Link>
+  <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+    🏢 <span>Add Facility</span>
+  </Link>
+</footer>
+
+
     </div>
   );
 }
