@@ -68,7 +68,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4">
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
@@ -84,64 +84,86 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg">
             <CardHeader className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold">Medicine Dashboard</h1>
+              <h1 className="text-xl md:text-2xl font-bold">Medicine Dashboard</h1>
               <Link href="/dashboard/add">
                 <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
               </Link>
             </CardHeader>
 
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Weekly Requirement</TableHead>
-                    <TableHead>Expiry Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {medicines.length > 0 ? (
-                    medicines.map((med) => (
-                      <TableRow key={med.id}>
-                        <TableCell>{med.name}</TableCell>
-                        <TableCell>{med.stock}</TableCell>
-                        <TableCell>{med.weeklyRequirement}</TableCell>
-                        <TableCell className={getExpiryColor(med.expiryDate)}>
-                          {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                            {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="space-x-2">
-                          <Link href={`/dashboard/edit/${med.id}`}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setTimeout(() => router.refresh(), 1000)} // ✅ Force refresh after edit
-                            >
-                              Edit
-                            </Button>
-                          </Link>
-                          <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>
-                            Delete
-                          </Button>
+              {/* ✅ Table for larger screens */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead>Weekly Requirement</TableHead>
+                      <TableHead>Expiry Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {medicines.length > 0 ? (
+                      medicines.map((med) => (
+                        <TableRow key={med.id}>
+                          <TableCell>{med.name}</TableCell>
+                          <TableCell>{med.stock}</TableCell>
+                          <TableCell>{med.weeklyRequirement}</TableCell>
+                          <TableCell className={getExpiryColor(med.expiryDate)}>
+                            {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="space-x-2">
+                            <Link href={`/dashboard/edit/${med.id}`}>
+                              <Button size="sm" variant="outline">Edit</Button>
+                            </Link>
+                            <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-500 py-4">
+                          No medicines found.
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-500 py-4">
-                        No medicines found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* ✅ Mobile-friendly Card Layout */}
+              <div className="md:hidden space-y-4">
+                {medicines.length > 0 ? (
+                  medicines.map((med) => (
+                    <Card key={med.id} className="p-4 shadow-md">
+                      <h2 className="text-lg font-bold">{med.name}</h2>
+                      <p><strong>Stock:</strong> {med.stock}</p>
+                      <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
+                      <p className={getExpiryColor(med.expiryDate)}>
+                        <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                      </p>
+                      <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                        {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                      </Badge>
+                      <div className="mt-3 flex space-x-2">
+                        <Link href={`/dashboard/edit/${med.id}`}>
+                          <Button size="sm" variant="outline">Edit</Button>
+                        </Link>
+                        <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500">No medicines found.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -153,12 +175,8 @@ export default function DashboardPage() {
               </DialogHeader>
               <p>Are you sure you want to delete this medicine?</p>
               <DialogFooter className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={closeModal}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={deleteMedicine}>
-                  Delete
-                </Button>
+                <Button variant="outline" onClick={closeModal}>Cancel</Button>
+                <Button variant="destructive" onClick={deleteMedicine}>Delete</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -167,6 +185,10 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+// ✅ Helper functions remain unchanged
+
+
 
 // ✅ Helper function to format expiry date correctly
 function formatDate(dateString: string) {
