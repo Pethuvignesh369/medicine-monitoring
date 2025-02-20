@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -18,22 +18,27 @@ type Medicine = {
   weeklyRequirement: number;
 };
 
+// ✅ Separate component to handle search params inside Suspense
+function SearchParamsComponent({ setSuccessMessage }: { setSuccessMessage: (msg: string | null) => void }) {
+  const searchParams = useSearchParams();
+  const success = searchParams.get("success");
+
+  useEffect(() => {
+    if (success) {
+      setSuccessMessage("Medicine updated successfully!");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    }
+  }, [success]);
+
+  return null;
+}
+
 export default function DashboardPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // ✅ Workaround for useSearchParams error
-  const [searchParams, setSearchParams] = useState<string | null>(null);
-  const params = useSearchParams();
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setSearchParams(params.get("success"));
-    }
-  }, [params]);
 
   useEffect(() => {
     async function fetchData() {
@@ -45,13 +50,6 @@ export default function DashboardPage() {
     }
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (searchParams) {
-      setSuccessMessage("Medicine updated successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    }
-  }, [searchParams]);
 
   function openModal(id: number) {
     setDeleteId(id);
@@ -83,6 +81,11 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto p-6">
+      {/* ✅ Suspense Wrapper for useSearchParams() */}
+      <Suspense fallback={null}>
+        <SearchParamsComponent setSuccessMessage={setSuccessMessage} />
+      </Suspense>
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
