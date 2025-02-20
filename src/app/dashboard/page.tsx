@@ -11,12 +11,19 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
+type Facility = {
+  id: number;
+  name: string;
+  type: string;
+};
+
 type Medicine = {
   id: number;
   name: string;
   stock: number;
   weeklyRequirement: number;
   expiryDate: string | null;
+  facility: Facility | string;
 };
 
 export default function DashboardPage() {
@@ -56,7 +63,6 @@ export default function DashboardPage() {
       if (res.ok) {
         fetchMedicines();
         setSuccessMessage("Medicine deleted successfully!");
-
         setTimeout(() => {
           setSuccessMessage(null);
         }, 3000);
@@ -91,7 +97,6 @@ export default function DashboardPage() {
             </CardHeader>
 
             <CardContent>
-              {/* ✅ Table for Desktop */}
               <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -100,6 +105,7 @@ export default function DashboardPage() {
                       <TableHead>Stock</TableHead>
                       <TableHead>Weekly Requirement</TableHead>
                       <TableHead>Expiry Date</TableHead>
+                      <TableHead>Facility</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -113,6 +119,10 @@ export default function DashboardPage() {
                           <TableCell>{med.weeklyRequirement}</TableCell>
                           <TableCell className={getExpiryColor(med.expiryDate)}>
                             {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {typeof med.facility === "object" ? med.facility.name : med.facility}
+                
                           </TableCell>
                           <TableCell>
                             <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
@@ -129,7 +139,7 @@ export default function DashboardPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-gray-500 py-4">
+                        <TableCell colSpan={7} className="text-center text-gray-500 py-4">
                           No medicines found.
                         </TableCell>
                       </TableRow>
@@ -138,18 +148,18 @@ export default function DashboardPage() {
                 </Table>
               </div>
 
-              {/* ✅ Mobile-friendly Cards */}
               <div className="md:hidden space-y-4">
                 {medicines.length > 0 ? (
                   medicines.map((med) => (
                     <Card key={med.id} className="p-4 shadow-md">
                       <h2 className="text-lg font-bold">{med.name}</h2>
-                      <p className="text-sm"><strong>Stock:</strong> {med.stock}</p>
-                      <p className="text-sm"><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
-                      <p className={`text-sm ${getExpiryColor(med.expiryDate)}`}>
+                      <p><strong>Stock:</strong> {med.stock}</p>
+                      <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
+                      <p className={getExpiryColor(med.expiryDate)}>
                         <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
                       </p>
-                      <Badge className={`${getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)} px-3 py-1 text-sm`}>
+                      <p><strong>Facility:</strong> {typeof med.facility === "object" ? med.facility.name : med.facility}</p>
+                      <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
                         {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
                       </Badge>
                       <div className="mt-3 flex space-x-2">
@@ -166,44 +176,26 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Delete Confirmation Modal */}
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Confirm Deletion</DialogTitle>
-              </DialogHeader>
-              <p>Are you sure you want to delete this medicine?</p>
-              <DialogFooter className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={closeModal}>Cancel</Button>
-                <Button variant="destructive" onClick={deleteMedicine}>Delete</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </>
       )}
     </div>
   );
 }
 
-// ✅ Helper Functions
-
+// ✅ Helper functions
 function formatDate(dateString: string) {
   const date = new Date(dateString);
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function getStockStatus(stock: number, weeklyRequirement: number, expiryDate: string | null) {
-  if (expiryDate && new Date(expiryDate) < new Date()) return "Expired";
-  return stock < weeklyRequirement ? "Low Stock" : "Sufficient";
+  return expiryDate && new Date(expiryDate) < new Date() ? "Expired" : stock < weeklyRequirement ? "Low Stock" : "Sufficient";
 }
 
 function getBadgeColor(stock: number, weeklyRequirement: number, expiryDate: string | null) {
-  if (expiryDate && new Date(expiryDate) < new Date()) return "bg-red-600 text-white";
-  return stock < weeklyRequirement ? "bg-yellow-600 text-white" : "bg-green-600 text-white";
+  return expiryDate && new Date(expiryDate) < new Date() ? "bg-red-600 text-white" : stock < weeklyRequirement ? "bg-yellow-600 text-white" : "bg-green-600 text-white";
 }
 
 function getExpiryColor(expiryDate: string | null) {
-  if (!expiryDate) return "text-gray-500";
-  return new Date(expiryDate) < new Date() ? "text-red-600 font-bold" : "text-green-600";
+  return !expiryDate ? "text-gray-500" : new Date(expiryDate) < new Date() ? "text-red-600 font-bold" : "text-green-600";
 }
