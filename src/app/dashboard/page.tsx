@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react"; 
+import { Loader2 } from "lucide-react";
+
+type Facility = {
+  id: number;
+  name: string;
+  type: string;
+};
 
 type Medicine = {
   id: number;
@@ -17,6 +23,7 @@ type Medicine = {
   stock: number;
   weeklyRequirement: number;
   expiryDate: string | null;
+  facility: Facility; // ✅ Facility details included
 };
 
 export default function DashboardPage() {
@@ -54,12 +61,9 @@ export default function DashboardPage() {
       const res = await fetch(`/api/medicines/${deleteId}`, { method: "DELETE" });
 
       if (res.ok) {
-        fetchMedicines(); // ✅ Re-fetch medicines after deletion
+        fetchMedicines();
         setSuccessMessage("Medicine deleted successfully!");
-
-        setTimeout(() => {
-          setSuccessMessage(null);
-        }, 3000);
+        setTimeout(() => setSuccessMessage(null), 3000);
       } else {
         alert("Failed to delete the medicine. Please try again.");
       }
@@ -91,7 +95,6 @@ export default function DashboardPage() {
             </CardHeader>
 
             <CardContent>
-              {/* ✅ Table for larger screens */}
               <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -100,6 +103,7 @@ export default function DashboardPage() {
                       <TableHead>Stock</TableHead>
                       <TableHead>Weekly Requirement</TableHead>
                       <TableHead>Expiry Date</TableHead>
+                      <TableHead>Facility</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -113,6 +117,9 @@ export default function DashboardPage() {
                           <TableCell>{med.weeklyRequirement}</TableCell>
                           <TableCell className={getExpiryColor(med.expiryDate)}>
                             {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <strong>{med.facility.name}</strong> ({med.facility.type})
                           </TableCell>
                           <TableCell>
                             <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
@@ -129,7 +136,7 @@ export default function DashboardPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-gray-500 py-4">
+                        <TableCell colSpan={7} className="text-center text-gray-500 py-4">
                           No medicines found.
                         </TableCell>
                       </TableRow>
@@ -137,37 +144,9 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-
-              {/* ✅ Mobile-friendly Card Layout */}
-              <div className="md:hidden space-y-4">
-                {medicines.length > 0 ? (
-                  medicines.map((med) => (
-                    <Card key={med.id} className="p-4 shadow-md">
-                      <h2 className="text-lg font-bold">{med.name}</h2>
-                      <p><strong>Stock:</strong> {med.stock}</p>
-                      <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
-                      <p className={getExpiryColor(med.expiryDate)}>
-                        <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                      </p>
-                      <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                        {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                      </Badge>
-                      <div className="mt-3 flex space-x-2">
-                        <Link href={`/dashboard/edit/${med.id}`}>
-                          <Button size="sm" variant="outline">Edit</Button>
-                        </Link>
-                        <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
-                      </div>
-                    </Card>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500">No medicines found.</p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
-          {/* Delete Confirmation Modal */}
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent>
               <DialogHeader>
@@ -186,17 +165,12 @@ export default function DashboardPage() {
   );
 }
 
-// ✅ Helper functions remain unchanged
-
-
-
-// ✅ Helper function to format expiry date correctly
+// ✅ Helper functions
 function formatDate(dateString: string) {
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }); // 📅 "DD/MM/YYYY"
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-// ✅ Helper functions for status
 function getStockStatus(stock: number, weeklyRequirement: number, expiryDate: string | null) {
   if (expiryDate && new Date(expiryDate) < new Date()) return "Expired";
   return stock < weeklyRequirement ? "Low Stock" : "Sufficient";

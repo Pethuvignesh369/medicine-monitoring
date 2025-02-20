@@ -7,15 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Facility {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  type     String  // e.g., Hospital, Polyclinic, Clinician Center, Dispensary
+  medicines Medicine[]
+}
+
 model Medicine {
   id                Int      @id @default(autoincrement())
   name              String
   stock             Int
   weeklyRequirement Int
-  expiryDate        DateTime?  
+  expiryDate        DateTime?
+  facilityId        Int       // ✅ Now required
+  facility          Facility  @relation(fields: [facilityId], references: [id])
   createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt // ✅ Auto-updates on changes
+  updatedAt         DateTime @updatedAt
 }
+
+
+
 
 
 

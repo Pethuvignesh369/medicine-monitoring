@@ -6,34 +6,53 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react"; // ✅ Loader icon
+import { Loader2 } from "lucide-react";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export default function EditMedicine() {
   const router = useRouter();
   const { id } = useParams();
+  
+  // State Variables
   const [name, setName] = useState("");
   const [stock, setStock] = useState<number | "">("");
   const [weeklyRequirement, setWeeklyRequirement] = useState<number | "">("");
-  const [expiryDate, setExpiryDate] = useState<string | "">(""); // ✅ New expiry field
+  const [expiryDate, setExpiryDate] = useState<string | "">("");
+  const [facilities, setFacilities] = useState<{ id: string; name: string }[]>([]); // ✅ Store facilities list
+  const [selectedFacility, setSelectedFacility] = useState<string | null>(null); // ✅ Store selected facility
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true); // ✅ Loading state
+  const [loading, setLoading] = useState(true);
 
+  // Fetch Medicine and Facilities
   useEffect(() => {
-    async function fetchMedicine() {
+    async function fetchData() {
       setLoading(true);
-      const res = await fetch(`/api/medicines/${id}`);
-      if (res.ok) {
-        const data = await res.json();
+
+      // Fetch facilities for dropdown
+      const facilitiesRes = await fetch(`/api/facilities`);
+      if (facilitiesRes.ok) {
+        const facilitiesData = await facilitiesRes.json();
+        setFacilities(facilitiesData);
+      }
+
+      // Fetch medicine details
+      const medicineRes = await fetch(`/api/medicines/${id}`);
+      if (medicineRes.ok) {
+        const data = await medicineRes.json();
         setName(data.name);
         setStock(data.stock);
         setWeeklyRequirement(data.weeklyRequirement);
-        setExpiryDate(data.expiryDate ? data.expiryDate.split("T")[0] : ""); // ✅ Format date
+        setExpiryDate(data.expiryDate ? data.expiryDate.split("T")[0] : "");
+        setSelectedFacility(data.facilityId || null); // ✅ Set selected facility
       }
+
       setLoading(false);
     }
-    fetchMedicine();
+
+    fetchData();
   }, [id]);
 
+  // Handle Form Submission
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -44,14 +63,15 @@ export default function EditMedicine() {
         name,
         stock: Number(stock),
         weeklyRequirement: Number(weeklyRequirement),
-        expiryDate: expiryDate ? new Date(expiryDate).toISOString() : null, // ✅ Convert to ISO format
+        expiryDate: expiryDate ? new Date(expiryDate).toISOString() : null,
+        facilityId: selectedFacility, // ✅ Send selected facility ID
       }),
     });
 
     if (res.ok) {
       setSuccessMessage("Medicine updated successfully!");
       setTimeout(() => {
-        router.refresh(); // ✅ Ensures updated data loads
+        router.refresh();
         router.push("/dashboard");
       }, 2000);
     }
@@ -77,11 +97,13 @@ export default function EditMedicine() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Medicine Name */}
               <div>
                 <label className="block text-sm font-medium mb-1">Medicine Name</label>
                 <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
 
+              {/* Stock */}
               <div>
                 <label className="block text-sm font-medium mb-1">Stock</label>
                 <Input
@@ -92,16 +114,20 @@ export default function EditMedicine() {
                 />
               </div>
 
+              {/* Weekly Requirement */}
               <div>
                 <label className="block text-sm font-medium mb-1">Weekly Requirement</label>
                 <Input
                   type="number"
                   value={weeklyRequirement}
-                  onChange={(e) => setWeeklyRequirement(e.target.value === "" ? "" : Number(e.target.value))}
+                  onChange={(e) =>
+                    setWeeklyRequirement(e.target.value === "" ? "" : Number(e.target.value))
+                  }
                   required
                 />
               </div>
 
+              {/* Expiry Date */}
               <div>
                 <label className="block text-sm font-medium mb-1">Expiry Date</label>
                 <Input
@@ -111,6 +137,27 @@ export default function EditMedicine() {
                 />
               </div>
 
+              {/* Facilities Dropdown */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Facility</label>
+                <Select
+                  value={selectedFacility || ""}
+                  onValueChange={(value) => setSelectedFacility(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a facility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {facilities.map((facility) => (
+                      <SelectItem key={facility.id} value={facility.id}>
+                        {facility.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Buttons */}
               <CardFooter className="flex justify-between">
                 <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>
                   Cancel

@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { PlusCircle, LayoutDashboard } from "lucide-react";
+import { PlusCircle, LayoutDashboard, Building2 } from "lucide-react"; // Added `Building2` icon
 
 export default function HomePage() {
   const router = useRouter();
@@ -38,6 +38,20 @@ export default function HomePage() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">View all medicines and manage stocks easily.</p>
+          </CardContent>
+        </Card>
+
+        {/* Add Facility Card */}
+        <Card
+          className="cursor-pointer transition-transform transform hover:scale-105"
+          onClick={() => router.push("/admin/facilities")}
+        >
+          <CardHeader className="flex items-center space-x-3">
+            <Building2 className="text-purple-600 w-8 h-8" />
+            <h2 className="text-lg font-semibold">Add Facility</h2>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Click here to add a new facility to the system.</p>
           </CardContent>
         </Card>
       </div>
