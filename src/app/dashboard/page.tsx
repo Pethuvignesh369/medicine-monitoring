@@ -11,6 +11,8 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { Package, AlertTriangle, CalendarX } from "lucide-react";
+import MedicineStockChart from "@/components/MedicineStockChart";
+
 
 type Facility = {
     id: number;
@@ -110,6 +112,11 @@ export default function DashboardPage() {
     <CalendarX size={14} /> Expiring Soon: {expiringSoonCount}
   </Badge>
 </div>
+
+{/* Medicine Stock Bar Chart */}
+{medicines.length > 0 && <MedicineStockChart medicines={medicines} />}
+
+
 
                     <Card className="shadow-lg">
                         <CardHeader className="flex justify-between items-center">
