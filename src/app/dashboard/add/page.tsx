@@ -11,6 +11,7 @@ export default function AddMedicine() {
   const [name, setName] = useState("");
   const [stock, setStock] = useState<number | "">("");
   const [weeklyRequirement, setWeeklyRequirement] = useState<number | "">("");
+  const [expiryDate, setExpiryDate] = useState(""); // ✅ New state for expiry
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
 
@@ -24,6 +25,7 @@ export default function AddMedicine() {
         name,
         stock: Number(stock),
         weeklyRequirement: Number(weeklyRequirement),
+        expiryDate, // ✅ Send expiry date
       }),
     });
 
@@ -31,7 +33,7 @@ export default function AddMedicine() {
       setSuccessMessage("Medicine added successfully!");
       setTimeout(() => {
         router.push("/dashboard?success=added");
-      }, 2000); // Redirect after 2 seconds
+      }, 2000);
     } else {
       alert("Failed to add medicine. Please try again.");
     }
@@ -39,7 +41,6 @@ export default function AddMedicine() {
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen p-4">
-      {/* Success Message */}
       {successMessage && (
         <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700 w-full max-w-md">
           <AlertTitle>Success</AlertTitle>
@@ -55,41 +56,26 @@ export default function AddMedicine() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Medicine Name</label>
-              <Input
-                type="text"
-                placeholder="Enter medicine name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+              <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Stock</label>
-              <Input
-                type="number"
-                placeholder="Enter stock quantity"
-                value={stock}
-                onChange={(e) => setStock(e.target.value === "" ? "" : Number(e.target.value))}
-                required
-              />
+              <Input type="number" value={stock} onChange={(e) => setStock(e.target.value === "" ? "" : Number(e.target.value))} required />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Weekly Requirement</label>
-              <Input
-                type="number"
-                placeholder="Enter weekly requirement"
-                value={weeklyRequirement}
-                onChange={(e) => setWeeklyRequirement(e.target.value === "" ? "" : Number(e.target.value))}
-                required
-              />
+              <Input type="number" value={weeklyRequirement} onChange={(e) => setWeeklyRequirement(e.target.value === "" ? "" : Number(e.target.value))} required />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Expiry Date</label>
+              <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
             </div>
 
             <CardFooter className="flex justify-center">
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
-                Add Medicine
-              </Button>
+              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">Add Medicine</Button>
             </CardFooter>
           </form>
         </CardContent>

@@ -8,9 +8,16 @@ datasource db {
 }
 
 model Medicine {
-  id               Int    @id @default(autoincrement())
-  name             String
-  stock           Int
+  id                Int      @id @default(autoincrement())
+  name              String
+  stock             Int
   weeklyRequirement Int
-  createdAt       DateTime @default(now())
+  expiryDate        DateTime?  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt // ✅ Auto-updates on changes
 }
+
+
+
+
+

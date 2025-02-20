@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from "@/components/ui/table";
@@ -16,22 +16,8 @@ type Medicine = {
   name: string;
   stock: number;
   weeklyRequirement: number;
+  expiryDate: string | null;
 };
-
-// ✅ Separate component to handle search params inside Suspense
-function SearchParamsComponent({ setSuccessMessage }: { setSuccessMessage: (msg: string | null) => void }) {
-  const searchParams = useSearchParams();
-  const success = searchParams.get("success");
-
-  useEffect(() => {
-    if (success) {
-      setSuccessMessage("Medicine updated successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    }
-  }, [success]);
-
-  return null;
-}
 
 export default function DashboardPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -39,16 +25,18 @@ export default function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+
+  async function fetchMedicines() {
+    setLoading(true);
+    const res = await fetch("/api/medicines");
+    const data = await res.json();
+    setMedicines(data);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      const res = await fetch("/api/medicines");
-      const data = await res.json();
-      setMedicines(data);
-      setLoading(false);
-    }
-    fetchData();
+    fetchMedicines();
   }, []);
 
   function openModal(id: number) {
@@ -66,7 +54,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/medicines/${deleteId}`, { method: "DELETE" });
 
       if (res.ok) {
-        setMedicines((prevMedicines) => prevMedicines.filter((med) => med.id !== deleteId));
+        fetchMedicines(); // ✅ Re-fetch medicines after deletion
         setSuccessMessage("Medicine deleted successfully!");
 
         setTimeout(() => {
@@ -81,11 +69,6 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto p-6">
-      {/* ✅ Suspense Wrapper for useSearchParams() */}
-      <Suspense fallback={null}>
-        <SearchParamsComponent setSuccessMessage={setSuccessMessage} />
-      </Suspense>
-
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
@@ -114,6 +97,7 @@ export default function DashboardPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead>Weekly Requirement</TableHead>
+                    <TableHead>Expiry Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -125,14 +109,21 @@ export default function DashboardPage() {
                         <TableCell>{med.name}</TableCell>
                         <TableCell>{med.stock}</TableCell>
                         <TableCell>{med.weeklyRequirement}</TableCell>
+                        <TableCell className={getExpiryColor(med.expiryDate)}>
+                          {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                        </TableCell>
                         <TableCell>
-                          <Badge className={getBadgeColor(med.stock, med.weeklyRequirement)}>
-                            {getStockStatus(med.stock, med.weeklyRequirement)}
+                          <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                            {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
                           </Badge>
                         </TableCell>
                         <TableCell className="space-x-2">
-                          <Link href={`/dashboard/edit/${med.id}?success=updated`}>
-                            <Button size="sm" variant="outline">
+                          <Link href={`/dashboard/edit/${med.id}`}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setTimeout(() => router.refresh(), 1000)} // ✅ Force refresh after edit
+                            >
                               Edit
                             </Button>
                           </Link>
@@ -144,7 +135,7 @@ export default function DashboardPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-500 py-4">
+                      <TableCell colSpan={6} className="text-center text-gray-500 py-4">
                         No medicines found.
                       </TableCell>
                     </TableRow>
@@ -177,11 +168,24 @@ export default function DashboardPage() {
   );
 }
 
-// Helper functions for status
-function getStockStatus(stock: number, weeklyRequirement: number) {
+// ✅ Helper function to format expiry date correctly
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }); // 📅 "DD/MM/YYYY"
+}
+
+// ✅ Helper functions for status
+function getStockStatus(stock: number, weeklyRequirement: number, expiryDate: string | null) {
+  if (expiryDate && new Date(expiryDate) < new Date()) return "Expired";
   return stock < weeklyRequirement ? "Low Stock" : "Sufficient";
 }
 
-function getBadgeColor(stock: number, weeklyRequirement: number) {
-  return stock < weeklyRequirement ? "bg-red-600 text-white" : "bg-green-600 text-white";
+function getBadgeColor(stock: number, weeklyRequirement: number, expiryDate: string | null) {
+  if (expiryDate && new Date(expiryDate) < new Date()) return "bg-red-600 text-white";
+  return stock < weeklyRequirement ? "bg-yellow-600 text-white" : "bg-green-600 text-white";
+}
+
+function getExpiryColor(expiryDate: string | null) {
+  if (!expiryDate) return "text-gray-500";
+  return new Date(expiryDate) < new Date() ? "text-red-600 font-bold" : "text-green-600";
 }
