@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET a single medicine by ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params; // ✅ No need to await
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params; // ✅ Await params
 
   const medicine = await prisma.medicine.findUnique({
     where: { id: Number(id) },
@@ -17,32 +17,27 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // UPDATE a medicine
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params; // ✅ Correct params usage
+    const { id } = await context.params; // ✅ Await params
+
     const { name, stock, weeklyRequirement, expiryDate } = await req.json();
 
     const updatedMedicine = await prisma.medicine.update({
       where: { id: Number(id) },
-      data: {
-        name,
-        stock,
-        weeklyRequirement,
-        expiryDate: expiryDate ? new Date(expiryDate) : null, // ✅ Ensure expiryDate is updated
-      },
+      data: { name, stock, weeklyRequirement, expiryDate },
     });
 
     return NextResponse.json({ message: "Medicine updated successfully", updatedMedicine });
   } catch (error) {
-    console.error("Update Error:", error); // ✅ Log errors for debugging
     return NextResponse.json({ error: "Failed to update medicine" }, { status: 500 });
   }
 }
 
 // DELETE a medicine
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params; // ✅ Correct params usage
+    const { id } = await context.params; // ✅ Await params
 
     await prisma.medicine.delete({
       where: { id: Number(id) },
@@ -50,7 +45,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     return NextResponse.json({ message: "Deleted successfully" });
   } catch (error) {
-    console.error("Delete Error:", error); // ✅ Log errors for debugging
     return NextResponse.json({ error: "Failed to delete medicine" }, { status: 500 });
   }
 }
