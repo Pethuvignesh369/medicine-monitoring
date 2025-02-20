@@ -77,6 +77,11 @@ export default function DashboardPage() {
     closeModal();
   }
 
+  // ✅ Compute total stock, low stock count, and expiring soon count
+  const totalStock = medicines.reduce((sum, med) => sum + med.stock, 0);
+  const lowStockCount = medicines.filter((med) => med.stock < med.weeklyRequirement).length;
+  const expiringSoonCount = medicines.filter((med) => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
+
   return (
     <div className="container mx-auto p-4">
       {loading ? (
@@ -92,6 +97,19 @@ export default function DashboardPage() {
             </Alert>
           )}
 
+          {/* SUMMARY LABELS */}
+          <div className="flex flex-wrap gap-4 mb-4">
+            <Badge className="px-4 py-2 rounded-full text-lg bg-blue-600 text-white">
+              Total Stock: {totalStock}
+            </Badge>
+            <Badge className="px-4 py-2 rounded-full text-lg bg-yellow-600 text-white">
+              Low Stock: {lowStockCount}
+            </Badge>
+            <Badge className="px-4 py-2 rounded-full text-lg bg-red-600 text-white">
+              Expiring Soon: {expiringSoonCount}
+            </Badge>
+          </div>
+
           <Card className="shadow-lg">
             <CardHeader className="flex justify-between items-center">
               <h1 className="text-xl md:text-2xl font-bold">Medicine Dashboard</h1>
@@ -101,56 +119,85 @@ export default function DashboardPage() {
             </CardHeader>
 
             <CardContent>
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Weekly Requirement</TableHead>
-                      <TableHead>Expiry Date</TableHead>
-                      <TableHead>Facility</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {medicines.length > 0 ? (
-                      medicines.map((med) => (
-                        <TableRow key={med.id}>
-                          <TableCell>{med.name}</TableCell>
-                          <TableCell>{med.stock}</TableCell>
-                          <TableCell>{med.weeklyRequirement}</TableCell>
-                          <TableCell className={getExpiryColor(med.expiryDate)}>
-                            {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {typeof med.facility === "object" ? med.facility.name : med.facility}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="space-x-2">
-                            <Link href={`/dashboard/edit/${med.id}`}>
-                              <Button size="sm" variant="outline">Edit</Button>
-                            </Link>
-                            <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-gray-500 py-4">
-                          No medicines found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
+  {/* Table View (For Larger Screens) */}
+  <div className="hidden md:block overflow-x-auto">
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Stock</TableHead>
+          <TableHead>Weekly Requirement</TableHead>
+          <TableHead>Expiry Date</TableHead>
+          <TableHead>Facility</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {medicines.length > 0 ? (
+          medicines.map((med) => (
+            <TableRow key={med.id}>
+              <TableCell>{med.name}</TableCell>
+              <TableCell>{med.stock}</TableCell>
+              <TableCell>{med.weeklyRequirement}</TableCell>
+              <TableCell className={getExpiryColor(med.expiryDate)}>
+                {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+              </TableCell>
+              <TableCell>{typeof med.facility === "object" ? med.facility.name : med.facility}</TableCell>
+              <TableCell>
+                <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                  {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                </Badge>
+              </TableCell>
+              <TableCell className="space-x-2">
+                <Link href={`/dashboard/edit/${med.id}`}>
+                  <Button size="sm" variant="outline">Edit</Button>
+                </Link>
+                <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
+              </TableCell>
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={7} className="text-center text-gray-500 py-4">
+              No medicines found.
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  </div>
+
+  {/* Card View (For Mobile) */}
+  <div className="md:hidden space-y-4">
+    {medicines.length > 0 ? (
+      medicines.map((med) => (
+        <Card key={med.id} className="p-4 shadow-md border">
+          <h2 className="text-lg font-semibold">{med.name}</h2>
+          <p className="text-sm text-gray-500">{typeof med.facility === "object" ? med.facility.name : med.facility}</p>
+          <div className="flex justify-between items-center mt-2">
+            <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+            </Badge>
+            <p className={`text-sm ${getExpiryColor(med.expiryDate)}`}>
+              {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+            </p>
+          </div>
+          <div className="flex justify-between items-center mt-4">
+            <Link href={`/dashboard/edit/${med.id}`}>
+              <Button size="sm" variant="outline">Edit</Button>
+            </Link>
+            <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
+          </div>
+        </Card>
+      ))
+    ) : (
+      <p className="text-center text-gray-500 py-4">No medicines found.</p>
+    )}
+  </div>
+</CardContent>
+
+
           </Card>
         </>
       )}
