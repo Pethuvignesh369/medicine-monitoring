@@ -39,6 +39,10 @@ export default function AddMedicine() {
     }
   }
 
+  function handleCancel() {
+    router.push("/dashboard"); // ✅ Redirect to dashboard
+  }
+
   return (
     <div className="flex flex-col justify-center items-center min-h-screen p-4">
       {successMessage && (
@@ -74,8 +78,13 @@ export default function AddMedicine() {
               <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required />
             </div>
 
-            <CardFooter className="flex justify-center">
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">Add Medicine</Button>
+            <CardFooter className="flex justify-between">
+              <Button type="button" className="w-1/2 bg-gray-400 hover:bg-gray-500 mr-2" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" className="w-1/2 bg-green-600 hover:bg-green-700">
+                Add Medicine
+              </Button>
             </CardFooter>
           </form>
         </CardContent>
