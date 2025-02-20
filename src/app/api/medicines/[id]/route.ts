@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET a single medicine by ID
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = context.params; // ✅ No need to await params
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params; // ✅ Correct way to extract params
 
   const medicine = await prisma.medicine.findUnique({
     where: { id: Number(id) },
@@ -17,9 +17,9 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
 }
 
 // UPDATE a medicine
-export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     const { name, stock, weeklyRequirement } = await req.json();
 
     const updatedMedicine = await prisma.medicine.update({
@@ -34,9 +34,9 @@ export async function PUT(req: NextRequest, context: { params: { id: string } })
 }
 
 // DELETE a medicine
-export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = context.params;
+    const { id } = params;
 
     await prisma.medicine.delete({
       where: { id: Number(id) },
