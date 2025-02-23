@@ -238,18 +238,18 @@ export default function DashboardPage() {
       {/* Export Buttons */}
       <div className="flex justify-end space-x-2 mb-4">
   <Button 
-    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-sm" 
+    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" 
     size="sm" 
     onClick={exportToPDF}
   >
-    <FileText size={14} className="mr-1" /> Export as PDF
+    <FileText size={14} className="mr-0" /> Export as PDF
   </Button>
   <Button 
-    className="bg-green-500 hover:bg-green-600 px-3 py-1 text-sm" 
+    className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" 
     size="sm" 
     onClick={exportToExcel}
   >
-    <FileSpreadsheet size={14} className="mr-1" /> Export as Excel
+    <FileSpreadsheet size={14} className="mr-0" /> Export as Excel
   </Button>
 </div>
 
@@ -276,10 +276,10 @@ export default function DashboardPage() {
             <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
               <AlertTriangle size={14} /> <span>Low Stock:</span> {lowStockCount(medicines)}
             </Badge>
-            <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
+            <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
               <CalendarX size={14} /> <span>Expiring Soon:</span> {expiringSoonCount(medicines)}
             </Badge>
-            <Badge className="px-3 py-1 text-xs bg-gray-800 text-white flex items-center gap-1">
+            <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
               <CalendarX size={14} /> <span>Expired:</span> {expiredCount(medicines)}
             </Badge>
           </div>
