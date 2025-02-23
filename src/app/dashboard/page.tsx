@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Package, AlertTriangle, CalendarX, XCircle } from "lucide-react";
+import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 type Facility = {
   id: number;
@@ -72,6 +75,100 @@ export default function DashboardPage() {
     setAlerts(newAlerts);
   }
 
+  function getTimestamp() {
+    const now = new Date();
+    return now.toISOString().replace(/[:.-]/g, "_"); // Replace special characters
+  }
+
+  function exportToPDF() {
+    const doc = new jsPDF();
+    doc.text("Medicine Inventory Report", 14, 10);
+  
+    // Calculate total stock
+    const totalStock = medicines.reduce((sum, med) => sum + med.stock, 0);
+  
+    // Categorize medicines
+    const currentDate = new Date();
+    const expiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
+    const nonExpiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) >= currentDate);
+  
+    // Add total stock info
+    doc.text(`Total Stock: ${totalStock}`, 14, 20);
+  
+    // Add non-expired medicines
+    doc.text("Available Medicines:", 14, 30);
+    autoTable(doc, {
+      startY: 35,
+      head: [["Name", "Stock", "Weekly Requirement", "Expiry Date", "Facility"]],
+      body: nonExpiredMedicines.map((med) => [
+        med.name,
+        med.stock,
+        med.weeklyRequirement,
+        med.expiryDate ? formatDate(med.expiryDate) : "N/A",
+        typeof med.facility === "object" ? med.facility.name : med.facility,
+      ]),
+    });
+  
+    // Add expired medicines
+    if (expiredMedicines.length > 0) {
+      doc.addPage();
+      doc.text("Expired Medicines:", 14, 10);
+      autoTable(doc, {
+        startY: 20,
+        head: [["Name", "Stock", "Expiry Date", "Facility"]],
+        body: expiredMedicines.map((med) => [
+          med.name,
+          med.stock,
+          med.expiryDate ? formatDate(med.expiryDate) : "N/A",
+          typeof med.facility === "object" ? med.facility.name : med.facility,
+        ]),
+      });
+    }
+  
+    const filename = `medicine_inventory_${getTimestamp()}.pdf`;
+    doc.save(filename);
+  }
+  
+  function exportToExcel() {
+    const totalStock = medicines.reduce((sum, med) => sum + med.stock, 0);
+    const currentDate = new Date();
+    const expiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
+    const nonExpiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) >= currentDate);
+  
+    // Prepare worksheet data
+    let data = [
+      { Name: "Total Stock", Stock: totalStock, "Weekly Requirement": "", "Expiry Date": "", Facility: "" },
+      { Name: "Available Medicines", Stock: "", "Weekly Requirement": "", "Expiry Date": "", Facility: "" },
+      ...nonExpiredMedicines.map(med => ({
+        Name: med.name,
+        Stock: med.stock,
+        "Weekly Requirement": med.weeklyRequirement,
+        "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
+        Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
+      })),
+    ];
+  
+    if (expiredMedicines.length > 0) {
+      data.push({ Name: "Expired Medicines", Stock: "", "Weekly Requirement": "", "Expiry Date": "", Facility: "" });
+      data = data.concat(
+        expiredMedicines.map(med => ({
+          Name: med.name,
+          Stock: med.stock,
+          "Weekly Requirement": "",
+          "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
+          Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
+        }))
+      );
+    }
+  
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Medicine Inventory");
+    const filename = `medicine_inventory_${getTimestamp()}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  }
+  
+
   function dismissAlert(id: number) {
     setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== id));
   }
@@ -110,6 +207,8 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto p-4">
+
+      
       {/* Automated Alerts Section */}
       {alerts.length > 0 && (
         <div className="mb-4">
@@ -132,8 +231,27 @@ export default function DashboardPage() {
               </Button>
             </Alert>
           ))}
+
         </div>
       )}
+
+      {/* Export Buttons */}
+      <div className="flex justify-end space-x-2 mb-4">
+  <Button 
+    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-sm" 
+    size="sm" 
+    onClick={exportToPDF}
+  >
+    <FileText size={14} className="mr-1" /> Export as PDF
+  </Button>
+  <Button 
+    className="bg-green-500 hover:bg-green-600 px-3 py-1 text-sm" 
+    size="sm" 
+    onClick={exportToExcel}
+  >
+    <FileSpreadsheet size={14} className="mr-1" /> Export as Excel
+  </Button>
+</div>
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
@@ -147,6 +265,8 @@ export default function DashboardPage() {
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           )}
+
+          
 
           {/* Statistics Badges */}
           <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
@@ -169,6 +289,7 @@ export default function DashboardPage() {
           <Card className="shadow-lg">
             <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center">
               <h1 className="text-xl md:text-2xl font-bold">Medicine Dashboard</h1>
+              
               <Link href="/dashboard/add">
                 <Button className="bg-green-600 hover:bg-green-700 mt-2 md:mt-0">+ Add Medicine</Button>
               </Link>
