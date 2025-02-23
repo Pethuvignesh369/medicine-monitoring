@@ -286,7 +286,7 @@ export default function DashboardPage() {
 
           {medicines.length > 0 && <MedicineStockChart medicines={medicines} />}
 
-          <Card className="shadow-lg">
+          <Card className="shadow-lg mt-4">
             <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center">
               <h1 className="text-xl md:text-2xl font-bold">Medicine Dashboard</h1>
               
@@ -366,12 +366,12 @@ export default function DashboardPage() {
                   </Table>
                 </div>
               )}
-
+<div className="container mx-auto p-4 pb-2"/> {/* Added pb-16 for spacing */} 
               <Pagination currentPage={currentPage} totalItems={medicines.length} itemsPerPage={itemsPerPage} setPage={setCurrentPage} />
               
             </CardContent>
           </Card>
-          <div className="container mx-auto p-4 pb-16"/> {/* Added pb-16 for spacing */} 
+          <div className="container mx-auto p-4 pb-8"/> {/* Added pb-16 for spacing */} 
         </>
       )}
 
