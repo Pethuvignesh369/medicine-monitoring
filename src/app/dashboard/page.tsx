@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -16,20 +16,66 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
-type Facility = {
+// Constants
+const ITEMS_PER_PAGE = 5;
+const MOBILE_BREAKPOINT = 768;
+const ALERT_TIMEOUT = 3000;
+const EXPIRY_WARNING_DAYS = 7;
+
+// Type Definitions
+interface Facility {
   id: number;
   name: string;
   type: string;
-};
+}
 
-type Medicine = {
+interface Medicine {
   id: number;
   name: string;
   stock: number;
   weeklyRequirement: number;
   expiryDate: string | null;
   facility: Facility | string;
-};
+}
+
+interface Alert {
+  id: number;
+  message: string;
+}
+
+// Components
+const AlertsSection = ({ alerts, onDismiss }: { alerts: Alert[], onDismiss: (id: number) => void }) => (
+  alerts.length > 0 && (
+    <div className="mb-4">
+      <h2 className="text-lg font-bold mb-2">🚨 Automated Alerts</h2>
+      {alerts.map((alert) => (
+        <Alert key={alert.id} className="flex items-center justify-between bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 mb-2">
+          <div>
+            <AlertTitle>Alert</AlertTitle>
+            <AlertDescription>{alert.message}</AlertDescription>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => onDismiss(alert.id)}>
+            <XCircle className="w-5 h-5 text-gray-600" />
+          </Button>
+        </Alert>
+      ))}
+    </div>
+  )
+);
+
+const ExportButtons = ({ onPDFExport, onExcelExport }: {
+  onPDFExport: () => void;
+  onExcelExport: () => void;
+}) => (
+  <div className="flex justify-end space-x-2 mb-4">
+    <Button className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" size="sm" onClick={onPDFExport}>
+      <FileText size={14} className="mr-0" /> Export as PDF
+    </Button>
+    <Button className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" size="sm" onClick={onExcelExport}>
+      <FileSpreadsheet size={14} className="mr-0" /> Export as Excel
+    </Button>
+  </div>
+);
 
 export default function DashboardPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -39,219 +85,164 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  const [alerts, setAlerts] = useState<{ id: number; message: string }[]>([]);
-  const itemsPerPage = 5;
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    fetchMedicines();
-    checkScreenSize();
-    window.addEventListener("resize", checkScreenSize);
-    return () => window.removeEventListener("resize", checkScreenSize);
+    let mounted = true;
+    
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/medicines");
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        if (mounted) {
+          setMedicines(data);
+          setAlerts(generateAlerts(data));
+        }
+      } catch (error) {
+        console.error("Error fetching medicines:", error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchData();
+    
+    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
-  async function fetchMedicines() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/medicines");
-      const data = await res.json();
-      setMedicines(data);
-      generateAlerts(data);
-    } catch (error) {
-      console.error("Error fetching medicines:", error);
-    }
-    setLoading(false);
-  }
-
-  function generateAlerts(medicines: Medicine[]) {
-    let newAlerts: { id: number; message: string }[] = [];
-    medicines.forEach((med) => {
+  const generateAlerts = useCallback((meds: Medicine[]): Alert[] => {
+    return meds.reduce((acc: Alert[], med) => {
       if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
-        newAlerts.push({ id: med.id, message: `⚠️ ${med.name} is expired!` });
+        acc.push({ id: med.id, message: `⚠️ ${med.name} is expired!` });
       } else if (med.stock < med.weeklyRequirement) {
-        newAlerts.push({ id: med.id, message: `⚠️ ${med.name} is running low on stock!` });
+        acc.push({ id: med.id, message: `⚠️ ${med.name} is running low on stock!` });
       }
-    });
-    setAlerts(newAlerts);
-  }
+      return acc;
+    }, []);
+  }, []);
 
-  function getTimestamp() {
-    const now = new Date();
-    return now.toISOString().replace(/[:.-]/g, "_"); // Replace special characters
-  }
-
-  function exportToPDF() {
+  const exportToPDF = useCallback(() => {
     const doc = new jsPDF();
-    doc.text("Medicine Inventory Report", 14, 10);
-  
-    // Calculate total stock
-    const totalStock = medicines.reduce((sum, med) => sum + med.stock, 0);
-  
-    // Categorize medicines
     const currentDate = new Date();
-    const expiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
-    const nonExpiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) >= currentDate);
-  
-    // Add total stock info
-    doc.text(`Total Stock: ${totalStock}`, 14, 20);
-  
-    // Add non-expired medicines
-    doc.text("Available Medicines:", 14, 30);
+    
+    const tableData = {
+      totalStock: medicines.reduce((sum, med) => sum + med.stock, 0),
+      nonExpired: medicines.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate),
+      expired: medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate)
+    };
+
+    doc.text("Medicine Inventory Report", 14, 10);
+    doc.text(`Total Stock: ${tableData.totalStock}`, 14, 20);
+
     autoTable(doc, {
-      startY: 35,
+      startY: 30,
       head: [["Name", "Stock", "Weekly Requirement", "Expiry Date", "Facility"]],
-      body: nonExpiredMedicines.map((med) => [
+      body: tableData.nonExpired.map(med => [
         med.name,
         med.stock,
         med.weeklyRequirement,
         med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-        typeof med.facility === "object" ? med.facility.name : med.facility,
+        typeof med.facility === "object" ? med.facility.name : med.facility
       ]),
     });
-  
-    // Add expired medicines
-    if (expiredMedicines.length > 0) {
+
+    if (tableData.expired.length) {
       doc.addPage();
-      doc.text("Expired Medicines:", 14, 10);
       autoTable(doc, {
         startY: 20,
         head: [["Name", "Stock", "Expiry Date", "Facility"]],
-        body: expiredMedicines.map((med) => [
+        body: tableData.expired.map(med => [
           med.name,
           med.stock,
           med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-          typeof med.facility === "object" ? med.facility.name : med.facility,
+          typeof med.facility === "object" ? med.facility.name : med.facility
         ]),
       });
     }
-  
-    const filename = `medicine_inventory_${getTimestamp()}.pdf`;
-    doc.save(filename);
-  }
-  
-  function exportToExcel() {
+
+    doc.save(`medicine_inventory_${getTimestamp()}.pdf`);
+  }, [medicines]);
+
+  const exportToExcel = useCallback(() => {
     const totalStock = medicines.reduce((sum, med) => sum + med.stock, 0);
     const currentDate = new Date();
-    const expiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
-    const nonExpiredMedicines = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) >= currentDate);
-  
-    // Prepare worksheet data
-    let data = [
-      { Name: "Total Stock", Stock: totalStock, "Weekly Requirement": "", "Expiry Date": "", Facility: "" },
-      { Name: "Available Medicines", Stock: "", "Weekly Requirement": "", "Expiry Date": "", Facility: "" },
-      ...nonExpiredMedicines.map(med => ({
+    const expired = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
+    const nonExpired = medicines.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate);
+
+    const data = [
+      { Name: "Total Stock", Stock: totalStock },
+      { Name: "Available Medicines" },
+      ...nonExpired.map(med => ({
         Name: med.name,
         Stock: med.stock,
         "Weekly Requirement": med.weeklyRequirement,
         "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
         Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
       })),
+      ...(expired.length ? [{ Name: "Expired Medicines" }] : []),
+      ...expired.map(med => ({
+        Name: med.name,
+        Stock: med.stock,
+        "Weekly Requirement": "",
+        "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
+        Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
+      }))
     ];
-  
-    if (expiredMedicines.length > 0) {
-      data.push({ Name: "Expired Medicines", Stock: "", "Weekly Requirement": "", "Expiry Date": "", Facility: "" });
-      data = data.concat(
-        expiredMedicines.map(med => ({
-          Name: med.name,
-          Stock: med.stock,
-          "Weekly Requirement": "",
-          "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-          Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
-        }))
-      );
-    }
-  
+
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Medicine Inventory");
-    const filename = `medicine_inventory_${getTimestamp()}.xlsx`;
-    XLSX.writeFile(workbook, filename);
-  }
-  
+    XLSX.writeFile(workbook, `medicine_inventory_${getTimestamp()}.xlsx`);
+  }, [medicines]);
 
-  function dismissAlert(id: number) {
-    setAlerts((prevAlerts) => prevAlerts.filter((alert) => alert.id !== id));
-  }
+  const dismissAlert = useCallback((id: number) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== id));
+  }, []);
 
-  function checkScreenSize() {
-    setIsMobile(window.innerWidth < 768);
-  }
-
-  function openModal(id: number) {
-    setDeleteId(id);
-    setIsModalOpen(true);
-  }
-
-  function closeModal() {
-    setDeleteId(null);
-    setIsModalOpen(false);
-  }
-
-  async function deleteMedicine() {
-    if (deleteId !== null) {
+  const handleDelete = useCallback(async () => {
+    if (deleteId === null) return;
+    setLoading(true);
+    try {
       const res = await fetch(`/api/medicines/${deleteId}`, { method: "DELETE" });
       if (res.ok) {
-        fetchMedicines();
+        setMedicines(prev => prev.filter(med => med.id !== deleteId));
         setSuccessMessage("Medicine deleted successfully!");
-        setTimeout(() => setSuccessMessage(null), 3000);
+        setTimeout(() => setSuccessMessage(null), ALERT_TIMEOUT);
+        setIsModalOpen(false);
+        setDeleteId(null);
       } else {
-        alert("Failed to delete the medicine. Please try again.");
+        throw new Error("Failed to delete");
       }
+    } catch (error) {
+      alert("Failed to delete the medicine. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    closeModal();
-  }
+  }, [deleteId]);
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentMedicines = medicines.slice(indexOfFirstItem, indexOfLastItem);
+  // Memoized calculations
+  const currentMedicines = useMemo(() => {
+    const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+    const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+    return medicines.slice(indexOfFirstItem, indexOfLastItem);
+  }, [medicines, currentPage]);
+
+  const totalStockValue = useMemo(() => totalStock(medicines), [medicines]);
 
   return (
     <div className="container mx-auto p-4">
-
-      
-      {/* Automated Alerts Section */}
-      {alerts.length > 0 && (
-        <div className="mb-4">
-          <h2 className="text-lg font-bold mb-2">🚨 Automated Alerts</h2>
-          {alerts.map((alert) => (
-            <Alert 
-              key={alert.id} 
-              className="flex items-center justify-between bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 mb-2"
-            >
-              <div>
-                <AlertTitle>Alert</AlertTitle>
-                <AlertDescription>{alert.message}</AlertDescription>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => dismissAlert(alert.id)}
-              >
-                <XCircle className="w-5 h-5 text-gray-600" />
-              </Button>
-            </Alert>
-          ))}
-
-        </div>
-      )}
-
-      {/* Export Buttons */}
-      <div className="flex justify-end space-x-2 mb-4">
-  <Button 
-    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" 
-    size="sm" 
-    onClick={exportToPDF}
-  >
-    <FileText size={14} className="mr-0" /> Export as PDF
-  </Button>
-  <Button 
-    className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" 
-    size="sm" 
-    onClick={exportToExcel}
-  >
-    <FileSpreadsheet size={14} className="mr-0" /> Export as Excel
-  </Button>
-</div>
+      <AlertsSection alerts={alerts} onDismiss={dismissAlert} />
+      <ExportButtons onPDFExport={exportToPDF} onExcelExport={exportToExcel} />
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
@@ -266,21 +257,18 @@ export default function DashboardPage() {
             </Alert>
           )}
 
-          
-
-          {/* Statistics Badges */}
           <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
             <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
-              <Package size={14} /> <span>Total Stock:</span> {totalStock(medicines)}
+              <Package size={14} /> Total Stock: {totalStockValue}
             </Badge>
             <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
-              <AlertTriangle size={14} /> <span>Low Stock:</span> {lowStockCount(medicines)}
+              <AlertTriangle size={14} /> Low Stock: {lowStockCount(medicines)}
             </Badge>
             <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
-              <CalendarX size={14} /> <span>Expiring Soon:</span> {expiringSoonCount(medicines)}
+              <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(medicines)}
             </Badge>
             <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
-              <CalendarX size={14} /> <span>Expired:</span> {expiredCount(medicines)}
+              <CalendarX size={14} /> Expired: {expiredCount(medicines)}
             </Badge>
           </div>
 
@@ -289,14 +277,12 @@ export default function DashboardPage() {
           <Card className="shadow-lg mt-4">
             <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center">
               <h1 className="text-xl md:text-2xl font-bold">Medicine Dashboard</h1>
-              
               <Link href="/dashboard/add">
                 <Button className="bg-green-600 hover:bg-green-700 mt-2 md:mt-0">+ Add Medicine</Button>
               </Link>
             </CardHeader>
 
             <CardContent>
-              {/* Mobile View - Card List */}
               {isMobile ? (
                 <div className="space-y-4">
                   {currentMedicines.map((med) => (
@@ -315,13 +301,21 @@ export default function DashboardPage() {
                         <Link href={`/dashboard/edit/${med.id}`}>
                           <Button size="sm" variant="outline">Edit</Button>
                         </Link>
-                        <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>Delete</Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          onClick={() => {
+                            setIsModalOpen(true);
+                            setDeleteId(med.id);
+                          }}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </Card>
                   ))}
                 </div>
               ) : (
-                // Desktop View - Table
                 <div className="overflow-x-auto">
                   <Table className="w-full">
                     <TableHeader>
@@ -344,9 +338,7 @@ export default function DashboardPage() {
                           <TableCell className={getExpiryColor(med.expiryDate)}>
                             {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
                           </TableCell>
-                          <TableCell>
-                            {typeof med.facility === "object" ? med.facility.name : med.facility}
-                          </TableCell>
+                          <TableCell>{typeof med.facility === "object" ? med.facility.name : med.facility}</TableCell>
                           <TableCell>
                             <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
                               {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
@@ -356,7 +348,14 @@ export default function DashboardPage() {
                             <Link href={`/dashboard/edit/${med.id}`}>
                               <Button size="sm" variant="outline">Edit</Button>
                             </Link>
-                            <Button size="sm" variant="destructive" onClick={() => openModal(med.id)}>
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              onClick={() => {
+                                setIsModalOpen(true);
+                                setDeleteId(med.id);
+                              }}
+                            >
                               Delete
                             </Button>
                           </TableCell>
@@ -366,89 +365,95 @@ export default function DashboardPage() {
                   </Table>
                 </div>
               )}
-<div className="container mx-auto p-4 pb-2"/> {/* Added pb-16 for spacing */} 
-              <Pagination currentPage={currentPage} totalItems={medicines.length} itemsPerPage={itemsPerPage} setPage={setCurrentPage} />
-              
+              <div className="container mx-auto p-4 pb-2"/>
+              <Pagination 
+                currentPage={currentPage} 
+                totalItems={medicines.length} 
+                itemsPerPage={ITEMS_PER_PAGE} 
+                setPage={setCurrentPage} 
+              />
             </CardContent>
           </Card>
-          <div className="container mx-auto p-4 pb-8"/> {/* Added pb-16 for spacing */} 
         </>
       )}
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={isModalOpen} onOpenChange={closeModal}>
+      <Dialog 
+        open={isModalOpen} 
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) setDeleteId(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
           <p>Are you sure you want to delete this medicine?</p>
           <DialogFooter className="mt-4 flex justify-end space-x-2">
-            <Button variant="outline" onClick={closeModal}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsModalOpen(false);
+                setDeleteId(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={deleteMedicine}>
+            <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-    {/* Sleek Black Footer */}
-<footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
-  <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    🏠 <span>Home</span>
-  </Link>
-  <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    📊 <span>Dashboard</span>
-  </Link>
-  <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    ➕ <span>Add Medicine</span>
-  </Link>
-  <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    🏢 <span>Add Facility</span>
-  </Link>
-</footer>
-
-
+      <div className="container mx-auto p-4 pb-6"/>
+      <footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
+        <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          🏠 <span>Home</span>
+        </Link>
+        <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          📊 <span>Dashboard</span>
+        </Link>
+        <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          ➕ <span>Add Medicine</span>
+        </Link>
+        <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          🏢 <span>Add Facility</span>
+        </Link>
+      </footer>
     </div>
   );
 }
 
-// ✅ Helper functions
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
+// Helper Functions
+const formatDate = (dateString: string): string =>
+  new Date(dateString).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-function getStockStatus(stock: number, weeklyRequirement: number, expiryDate: string | null) {
-  return expiryDate && new Date(expiryDate) < new Date() ? "Expired" : stock < weeklyRequirement ? "Low Stock" : "Sufficient";
-}
+const getStockStatus = (stock: number, weeklyRequirement: number, expiryDate: string | null): string =>
+  expiryDate && new Date(expiryDate) < new Date() ? "Expired" : stock < weeklyRequirement ? "Low Stock" : "Sufficient";
 
-function getBadgeColor(stock: number, weeklyRequirement: number, expiryDate: string | null) {
-  return expiryDate && new Date(expiryDate) < new Date() ? "bg-red-600 text-white" : stock < weeklyRequirement ? "bg-yellow-600 text-white" : "bg-green-600 text-white";
-}
+const getBadgeColor = (stock: number, weeklyRequirement: number, expiryDate: string | null): string =>
+  expiryDate && new Date(expiryDate) < new Date() ? "bg-red-600 text-white" : stock < weeklyRequirement ? "bg-yellow-600 text-white" : "bg-green-600 text-white";
 
-function getExpiryColor(expiryDate: string | null) {
-  return !expiryDate ? "text-gray-500" : new Date(expiryDate) < new Date() ? "text-red-600 font-bold" : "text-green-600";
-}
+const getExpiryColor = (expiryDate: string | null): string =>
+  !expiryDate ? "text-gray-500" : new Date(expiryDate) < new Date() ? "text-red-600 font-bold" : "text-green-600";
 
-function totalStock(medicines: Medicine[]) {
-  return medicines.reduce((total, med) => total + med.stock, 0);
-}
+const totalStock = (medicines: Medicine[]): number =>
+  medicines.reduce((total, med) => total + med.stock, 0);
 
-function lowStockCount(medicines: Medicine[]) {
-  return medicines.filter(med => med.stock < med.weeklyRequirement).length;
-}
+const lowStockCount = (medicines: Medicine[]): number =>
+  medicines.filter(med => med.stock < med.weeklyRequirement).length;
 
-function expiringSoonCount(medicines: Medicine[]) {
-    const today = new Date();
-    return medicines.filter(med => 
-      med.expiryDate && 
-      new Date(med.expiryDate) > today && // Should not be expired
-      new Date(med.expiryDate) <= new Date(today.setDate(today.getDate() + 7)) // Expiring within 7 days
-    ).length;
-  }
+const expiringSoonCount = (medicines: Medicine[]): number => {
+  const today = new Date();
+  return medicines.filter(med => 
+    med.expiryDate && 
+    new Date(med.expiryDate) > today && 
+    new Date(med.expiryDate) <= new Date(today.setDate(today.getDate() + EXPIRY_WARNING_DAYS))
+  ).length;
+};
 
-function expiredCount(medicines: Medicine[]) {
-    return medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
-  }
+const expiredCount = (medicines: Medicine[]): number =>
+  medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
 
+const getTimestamp = (): string =>
+  new Date().toISOString().replace(/[:.-]/g, "_");
