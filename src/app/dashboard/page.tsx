@@ -10,13 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet } from "lucide-react";
+import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2 } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Navbar from "@/components/Navbar";
+import { cn } from "@/lib/utils"; // Add this import
 
 const ITEMS_PER_PAGE = 5;
 const MOBILE_BREAKPOINT = 768;
@@ -300,54 +301,83 @@ export default function VeterinaryMedicineDashboard() {
               </CardHeader>
               <CardContent>
                 {isMobile ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {currentMedicines.map((med) => (
-                      <Card key={med.id} className="p-4 shadow-md">
-                        <h2 className="text-lg font-bold">{med.name}</h2>
-                        <p><strong>Stock:</strong> {med.stock}</p>
-                        <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
-                        <p className={getExpiryColor(med.expiryDate)}>
-                          <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                        </p>
-                        <p><strong>Facility:</strong> {med.facility.name}</p>
-                        <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                          {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                        </Badge>
-                        <div className="mt-2 space-x-2">
-                          <Link href={`/dashboard/edit/${med.id}`}>
-                            <Button size="sm" variant="outline">Edit</Button>
-                          </Link>
-                          <Button 
-                            size="sm" 
-                            variant="destructive" 
-                            onClick={() => {
-                              setIsModalOpen(true);
-                              setDeleteId(med.id);
-                            }}
-                          >
-                            Delete
-                          </Button>
-                          <Link href={`/dashboard/usage/${med.id}`}>
-                            <Button size="sm" variant="outline">View Usage</Button>
-                          </Link>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2">
-                          <Input
-                            type="number"
-                            placeholder="Today’s Usage"
-                            value={usageInputs[med.id] || ""}
-                            onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                            className="w-24"
-                            min="0"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleUsageSubmit(med.id)}
-                            disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
-                          >
-                            Log Usage
-                          </Button>
-                        </div>
+                      <Card key={med.id} className="shadow-md border-l-4 border-blue-500 bg-white rounded-lg overflow-hidden">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <h2 className="text-lg font-bold text-gray-800">{med.name}</h2>
+                            <Badge className={cn(
+                              "px-2 py-1 text-xs",
+                              getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)
+                            )}>
+                              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="bg-blue-50 p-2 rounded-md">
+                              <p className="text-gray-600"><strong>Stock:</strong></p>
+                              <p className="text-blue-700 font-semibold">{med.stock}</p>
+                            </div>
+                            <div className="bg-blue-50 p-2 rounded-md">
+                              <p className="text-gray-600"><strong>Weekly:</strong></p>
+                              <p className="text-blue-700 font-semibold">{med.weeklyRequirement}</p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-md col-span-2">
+                              <p className="text-gray-600"><strong>Expiry:</strong></p>
+                              <p className={cn("font-semibold", getExpiryColor(med.expiryDate))}>
+                                {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-md col-span-2">
+                              <p className="text-gray-600"><strong>Facility:</strong></p>
+                              <p className="text-gray-800">{med.facility.name}</p>
+                            </div>
+                          </div>
+                          <div className="mt-4 flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="Usage"
+                                value={usageInputs[med.id] || ""}
+                                onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                                className="w-24 bg-gray-100 border-gray-300"
+                                min="0"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleUsageSubmit(med.id)}
+                                disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                                className="bg-teal-600 hover:bg-teal-700"
+                              >
+                                Log
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Link href={`/dashboard/edit/${med.id}`}>
+                                <Button size="sm" variant="outline" className="flex items-center gap-1">
+                                  <Edit2 className="w-4 h-4" /> Edit
+                                </Button>
+                              </Link>
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="flex items-center gap-1"
+                                onClick={() => {
+                                  setIsModalOpen(true);
+                                  setDeleteId(med.id);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" /> Delete
+                              </Button>
+                              <Link href={`/dashboard/usage/${med.id}`}>
+                                <Button size="sm" variant="outline" className="flex items-center gap-1">
+                                  <BarChart2 className="w-4 h-4" /> Usage
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </CardContent>
                       </Card>
                     ))}
                   </div>
