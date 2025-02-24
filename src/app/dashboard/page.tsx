@@ -247,7 +247,7 @@ export default function VeterinaryMedicineDashboard() {
             "flex items-center p-4 border-b border-teal-700",
             isSidebarExpanded ? "justify-between" : "justify-center"
           )}>
-            {isSidebarExpanded && <h2 className="text-xl font-bold">Menu</h2>}
+            {isSidebarExpanded && <h2 className="text-xl font-bold">VetMed</h2>}
             <Button
               variant="ghost"
               size="icon"
