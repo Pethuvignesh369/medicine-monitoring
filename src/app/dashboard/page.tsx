@@ -238,7 +238,7 @@ export default function VeterinaryMedicineDashboard() {
       alert("Please enter a valid positive quantity");
       return;
     }
-
+  
     setLoading(true);
     try {
       const res = await fetch("/api/medicine-usage", {
@@ -246,19 +246,23 @@ export default function VeterinaryMedicineDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ medicineId, quantity }),
       });
-
+  
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || "Failed to log usage");
       }
-
+  
       const updatedMedicines = await fetch("/api/medicines").then(r => r.json());
       setMedicines(updatedMedicines);
       setSuccessMessage(`Usage of ${quantity} units logged successfully!`);
       setTimeout(() => setSuccessMessage(null), ALERT_TIMEOUT);
       setUsageInputs(prev => ({ ...prev, [medicineId]: "" }));
-    } catch (error) {
-      alert(error.message || "Failed to log usage");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message || "Failed to log usage");
+      } else {
+        alert("An unexpected error occurred while logging usage");
+      }
     } finally {
       setLoading(false);
     }
