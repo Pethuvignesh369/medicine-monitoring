@@ -10,14 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2 } from "lucide-react";
+import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, Menu, X } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Navbar from "@/components/Navbar";
-import { cn } from "@/lib/utils"; // Add this import
+import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 5;
 const MOBILE_BREAKPOINT = 768;
@@ -49,6 +49,7 @@ export default function VeterinaryMedicineDashboard() {
   const [isMobile, setIsMobile] = useState(false);
   const [facilityFilter, setFacilityFilter] = useState<string>("All");
   const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const router = useRouter();
 
@@ -132,7 +133,7 @@ export default function VeterinaryMedicineDashboard() {
 
     const totalStock = filteredMeds.reduce((sum, med) => sum + med.stock, 0);
     const currentDate = new Date();
-    const expired = filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
+    const expired = filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date());
     const nonExpired = filteredMeds.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate);
 
     const data = [
@@ -232,268 +233,339 @@ export default function VeterinaryMedicineDashboard() {
   const totalStockValue = useMemo(() => totalStock(filteredMedicines), [filteredMedicines]);
 
   return (
-    <div className="min-h-screen bg-gray-100 pt-20">
-      <Navbar />
-      <div className="container mx-auto p-4">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
-          </div>
-        ) : (
-          <>
-            {successMessage && (
-              <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
-                <AlertTitle>Success</AlertTitle>
-                <AlertDescription>{successMessage}</AlertDescription>
-              </Alert>
-            )}
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <div
+        className={cn(
+          "fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-blue-900 to-teal-800 text-white shadow-lg z-20 transition-transform duration-300 ease-in-out",
+          isMobile ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-teal-700">
+          <h2 className="text-xl font-bold">Dashboard Menu</h2>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(false)}
+              className="text-white hover:text-teal-300"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          )}
+        </div>
+        <nav className="p-4 space-y-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <Home className="w-5 h-5" />
+            <span>Home</span>
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 p-2 rounded-md bg-white/20 hover:bg-white/30 transition-all duration-200"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <BarChart2 className="w-5 h-5" />
+            <span>Dashboard</span>
+          </Link>
+          <Link
+            href="/dashboard/add"
+            className="flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <PlusCircle className="w-5 h-5" />
+            <span>Add Medicine</span>
+          </Link>
+          <Link
+            href="/admin/facilities"
+            className="flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <Building2 className="w-5 h-5" />
+            <span>Add Facility</span>
+          </Link>
+        </nav>
+      </div>
 
-            <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
-              <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
-                <Package size={14} /> Total Stock: {totalStockValue}
-              </Badge>
-              <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
-                <AlertTriangle size={14} /> Low Stock: {lowStockCount(filteredMedicines)}
-              </Badge>
-              <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
-                <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(filteredMedicines)}
-              </Badge>
-              <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
-                <CalendarX size={14} /> Expired: {expiredCount(filteredMedicines)}
-              </Badge>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {isMobile && <Navbar />}
+        <div className={cn("p-4", isMobile ? "pt-20" : "pt-0 ml-64")}>
+          {/* Hamburger Toggle for Mobile */}
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="fixed top-20 left-4 z-30 bg-white border-blue-500"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="w-6 h-6 text-blue-900" />
+            </Button>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
             </div>
+          ) : (
+            <>
+              {successMessage && (
+                <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
+                  <AlertTitle>Success</AlertTitle>
+                  <AlertDescription>{successMessage}</AlertDescription>
+                </Alert>
+              )}
 
-            {filteredMedicines.length > 0 && <MedicineStockChart medicines={filteredMedicines} />}
+              <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
+                <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
+                  <Package size={14} /> Total Stock: {totalStockValue}
+                </Badge>
+                <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
+                  <AlertTriangle size={14} /> Low Stock: {lowStockCount(filteredMedicines)}
+                </Badge>
+                <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
+                  <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(filteredMedicines)}
+                </Badge>
+                <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
+                  <CalendarX size={14} /> Expired: {expiredCount(filteredMedicines)}
+                </Badge>
+              </div>
 
-            <Card className="shadow-lg mt-4">
-              <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
-                <div className="flex flex-col md:flex-row items-center gap-2">
-                  <Link href="/dashboard/add">
-                    <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
-                  </Link>
-                  <select 
-                    value={facilityFilter} 
-                    onChange={(e) => setFacilityFilter(e.target.value)}
-                    className="p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="All">All Facilities</option>
-                    <option value="Dispensary">Dispensaries</option>
-                    <option value="Hospital">Hospitals</option>
-                    <option value="ClinicianCenter">Clinician Centers</option>
-                    <option value="Polyclinic">Polyclinics</option>
-                  </select>
-                  <Button 
-                    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" 
-                    size="sm" 
-                    onClick={exportToPDF}
-                  >
-                    <FileText size={14} className="mr-1" /> Export as PDF
-                  </Button>
-                  <Button 
-                    className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" 
-                    size="sm" 
-                    onClick={exportToExcel}
-                  >
-                    <FileSpreadsheet size={14} className="mr-1" /> Export as Excel
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isMobile ? (
-                  <div className="space-y-6">
-                    {currentMedicines.map((med) => (
-                      <Card key={med.id} className="shadow-md border-l-4 border-blue-500 bg-white rounded-lg overflow-hidden">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <h2 className="text-lg font-bold text-gray-800">{med.name}</h2>
-                            <Badge className={cn(
-                              "px-2 py-1 text-xs",
-                              getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)
-                            )}>
-                              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="bg-blue-50 p-2 rounded-md">
-                              <p className="text-gray-600"><strong>Stock:</strong></p>
-                              <p className="text-blue-700 font-semibold">{med.stock}</p>
-                            </div>
-                            <div className="bg-blue-50 p-2 rounded-md">
-                              <p className="text-gray-600"><strong>Weekly:</strong></p>
-                              <p className="text-blue-700 font-semibold">{med.weeklyRequirement}</p>
-                            </div>
-                            <div className="bg-gray-50 p-2 rounded-md col-span-2">
-                              <p className="text-gray-600"><strong>Expiry:</strong></p>
-                              <p className={cn("font-semibold", getExpiryColor(med.expiryDate))}>
-                                {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                              </p>
-                            </div>
-                            <div className="bg-gray-50 p-2 rounded-md col-span-2">
-                              <p className="text-gray-600"><strong>Facility:</strong></p>
-                              <p className="text-gray-800">{med.facility.name}</p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                placeholder="Usage"
-                                value={usageInputs[med.id] || ""}
-                                onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                                className="w-24 bg-gray-100 border-gray-300"
-                                min="0"
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleUsageSubmit(med.id)}
-                                disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
-                                className="bg-teal-600 hover:bg-teal-700"
-                              >
-                                Log
-                              </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Link href={`/dashboard/edit/${med.id}`}>
-                                <Button size="sm" variant="outline" className="flex items-center gap-1">
-                                  <Edit2 className="w-4 h-4" /> Edit
-                                </Button>
-                              </Link>
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
-                                className="flex items-center gap-1"
-                                onClick={() => {
-                                  setIsModalOpen(true);
-                                  setDeleteId(med.id);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </Button>
-                              <Link href={`/dashboard/usage/${med.id}`}>
-                                <Button size="sm" variant="outline" className="flex items-center gap-1">
-                                  <BarChart2 className="w-4 h-4" /> Usage
-                                </Button>
-                              </Link>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+              {filteredMedicines.length > 0 && <MedicineStockChart medicines={filteredMedicines} />}
+
+              <Card className="shadow-lg mt-4">
+                <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                  <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
+                  <div className="flex flex-col md:flex-row items-center gap-2">
+                    <Link href="/dashboard/add">
+                      <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
+                    </Link>
+                    <select 
+                      value={facilityFilter} 
+                      onChange={(e) => setFacilityFilter(e.target.value)}
+                      className="p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="All">All Facilities</option>
+                      <option value="Dispensary">Dispensaries</option>
+                      <option value="Hospital">Hospitals</option>
+                      <option value="ClinicianCenter">Clinician Centers</option>
+                      <option value="Polyclinic">Polyclinics</option>
+                    </select>
+                    <Button 
+                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" 
+                      size="sm" 
+                      onClick={exportToPDF}
+                    >
+                      <FileText size={14} className="mr-1" /> Export as PDF
+                    </Button>
+                    <Button 
+                      className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" 
+                      size="sm" 
+                      onClick={exportToExcel}
+                    >
+                      <FileSpreadsheet size={14} className="mr-1" /> Export as Excel
+                    </Button>
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table className="w-full">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Stock</TableHead>
-                          <TableHead>Weekly Requirement</TableHead>
-                          <TableHead>Expiry Date</TableHead>
-                          <TableHead>Facility</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Today’s Usage</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentMedicines.map((med) => (
-                          <TableRow key={med.id}>
-                            <TableCell>{med.name}</TableCell>
-                            <TableCell>{med.stock}</TableCell>
-                            <TableCell>{med.weeklyRequirement}</TableCell>
-                            <TableCell className={getExpiryColor(med.expiryDate)}>
-                              {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                            </TableCell>
-                            <TableCell>{med.facility.name}</TableCell>
-                            <TableCell>
-                              <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                </CardHeader>
+                <CardContent>
+                  {isMobile ? (
+                    <div className="space-y-6">
+                      {currentMedicines.map((med) => (
+                        <Card key={med.id} className="shadow-md border-l-4 border-blue-500 bg-white rounded-lg overflow-hidden">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <h2 className="text-lg font-bold text-gray-800">{med.name}</h2>
+                              <Badge className={cn(
+                                "px-2 py-1 text-xs",
+                                getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)
+                              )}>
                                 {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
                               </Badge>
-                            </TableCell>
-                            <TableCell>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="bg-blue-50 p-2 rounded-md">
+                                <p className="text-gray-600"><strong>Stock:</strong></p>
+                                <p className="text-blue-700 font-semibold">{med.stock}</p>
+                              </div>
+                              <div className="bg-blue-50 p-2 rounded-md">
+                                <p className="text-gray-600"><strong>Weekly:</strong></p>
+                                <p className="text-blue-700 font-semibold">{med.weeklyRequirement}</p>
+                              </div>
+                              <div className="bg-gray-50 p-2 rounded-md col-span-2">
+                                <p className="text-gray-600"><strong>Expiry:</strong></p>
+                                <p className={cn("font-semibold", getExpiryColor(med.expiryDate))}>
+                                  {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                                </p>
+                              </div>
+                              <div className="bg-gray-50 p-2 rounded-md col-span-2">
+                                <p className="text-gray-600"><strong>Facility:</strong></p>
+                                <p className="text-gray-800">{med.facility.name}</p>
+                              </div>
+                            </div>
+                            <div className="mt-4 flex flex-col gap-2">
                               <div className="flex items-center gap-2">
                                 <Input
                                   type="number"
                                   placeholder="Usage"
                                   value={usageInputs[med.id] || ""}
                                   onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                                  className="w-20"
+                                  className="w-24 bg-gray-100 border-gray-300"
                                   min="0"
                                 />
                                 <Button
                                   size="sm"
                                   onClick={() => handleUsageSubmit(med.id)}
                                   disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                                  className="bg-teal-600 hover:bg-teal-700"
                                 >
                                   Log
                                 </Button>
                               </div>
-                            </TableCell>
-                            <TableCell className="space-x-2">
-                              <Link href={`/dashboard/edit/${med.id}`}>
-                                <Button size="sm" variant="outline">Edit</Button>
-                              </Link>
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
-                                onClick={() => {
-                                  setIsModalOpen(true);
-                                  setDeleteId(med.id);
-                                }}
-                              >
-                                Delete
-                              </Button>
-                              <Link href={`/dashboard/usage/${med.id}`}>
-                                <Button size="sm" variant="outline">View Usage</Button>
-                              </Link>
-                            </TableCell>
+                              <div className="flex flex-wrap gap-2">
+                                <Link href={`/dashboard/edit/${med.id}`}>
+                                  <Button size="sm" variant="outline" className="flex items-center gap-1">
+                                    <Edit2 className="w-4 h-4" /> Edit
+                                  </Button>
+                                </Link>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  className="flex items-center gap-1"
+                                  onClick={() => {
+                                    setIsModalOpen(true);
+                                    setDeleteId(med.id);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" /> Delete
+                                </Button>
+                                <Link href={`/dashboard/usage/${med.id}`}>
+                                  <Button size="sm" variant="outline" className="flex items-center gap-1">
+                                    <BarChart2 className="w-4 h-4" /> Usage
+                                  </Button>
+                                </Link>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table className="w-full">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Stock</TableHead>
+                            <TableHead>Weekly Requirement</TableHead>
+                            <TableHead>Expiry Date</TableHead>
+                            <TableHead>Facility</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Today’s Usage</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-                <div className="container mx-auto p-4 pb-2"/>
-                <Pagination 
-                  currentPage={currentPage} 
-                  totalItems={filteredMedicines.length} 
-                  itemsPerPage={ITEMS_PER_PAGE} 
-                  setPage={setCurrentPage} 
-                />
-              </CardContent>
-            </Card>
-          </>
-        )}
+                        </TableHeader>
+                        <TableBody>
+                          {currentMedicines.map((med) => (
+                            <TableRow key={med.id}>
+                              <TableCell>{med.name}</TableCell>
+                              <TableCell>{med.stock}</TableCell>
+                              <TableCell>{med.weeklyRequirement}</TableCell>
+                              <TableCell className={getExpiryColor(med.expiryDate)}>
+                                {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                              </TableCell>
+                              <TableCell>{med.facility.name}</TableCell>
+                              <TableCell>
+                                <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                                  {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    placeholder="Usage"
+                                    value={usageInputs[med.id] || ""}
+                                    onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                                    className="w-20"
+                                    min="0"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleUsageSubmit(med.id)}
+                                    disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                                  >
+                                    Log
+                                  </Button>
+                                </div>
+                              </TableCell>
+                              <TableCell className="space-x-2">
+                                <Link href={`/dashboard/edit/${med.id}`}>
+                                  <Button size="sm" variant="outline">Edit</Button>
+                                </Link>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  onClick={() => {
+                                    setIsModalOpen(true);
+                                    setDeleteId(med.id);
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                                <Link href={`/dashboard/usage/${med.id}`}>
+                                  <Button size="sm" variant="outline">View Usage</Button>
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  <div className="container mx-auto p-4 pb-2"/>
+                  <Pagination 
+                    currentPage={currentPage} 
+                    totalItems={filteredMedicines.length} 
+                    itemsPerPage={ITEMS_PER_PAGE} 
+                    setPage={setCurrentPage} 
+                  />
+                </CardContent>
+              </Card>
+            </>
+          )}
 
-        <Dialog 
-          open={isModalOpen} 
-          onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setDeleteId(null);
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Delete</DialogTitle>
-            </DialogHeader>
-            <p>Are you sure you want to remove this veterinary medicine?</p>
-            <DialogFooter className="mt-4 flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setDeleteId(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <Dialog 
+            open={isModalOpen} 
+            onOpenChange={(open) => {
+              setIsModalOpen(open);
+              if (!open) setDeleteId(null);
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirm Delete</DialogTitle>
+              </DialogHeader>
+              <p>Are you sure you want to remove this veterinary medicine?</p>
+              <DialogFooter className="mt-4 flex justify-end space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setDeleteId(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDelete}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   );
