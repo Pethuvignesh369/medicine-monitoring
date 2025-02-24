@@ -38,30 +38,6 @@ interface Medicine {
   facility: Facility;
 }
 
-interface Alert {
-  id: number;
-  message: string;
-}
-
-const AlertsSection = ({ alerts, onDismiss }: { alerts: Alert[], onDismiss: (id: number) => void }) => (
-  alerts.length > 0 && (
-    <div className="mb-4">
-      <h2 className="text-lg font-bold mb-2">🚨 Veterinary Medicine Alerts</h2>
-      {alerts.map((alert) => (
-        <Alert key={alert.id} className="flex items-center justify-between bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 mb-2">
-          <div>
-            <AlertTitle>Alert</AlertTitle>
-            <AlertDescription>{alert.message}</AlertDescription>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => onDismiss(alert.id)}>
-            <XCircle className="w-5 h-5 text-gray-600" />
-          </Button>
-        </Alert>
-      ))}
-    </div>
-  )
-);
-
 export default function VeterinaryMedicineDashboard() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +46,6 @@ export default function VeterinaryMedicineDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [facilityFilter, setFacilityFilter] = useState<string>("All");
   const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
 
@@ -87,7 +62,6 @@ export default function VeterinaryMedicineDashboard() {
         const data = await res.json();
         if (mounted) {
           setMedicines(data);
-          setAlerts(generateAlerts(data));
         }
       } catch (error) {
         console.error("Error fetching veterinary medicines:", error);
@@ -106,17 +80,6 @@ export default function VeterinaryMedicineDashboard() {
       mounted = false;
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
-
-  const generateAlerts = useCallback((meds: Medicine[]): Alert[] => {
-    return meds.reduce((acc: Alert[], med) => {
-      if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
-        acc.push({ id: med.id, message: `⚠️ ${med.name} is expired at ${med.facility.name}!` });
-      } else if (med.stock < med.weeklyRequirement) {
-        acc.push({ id: med.id, message: `⚠️ ${med.name} is running low at ${med.facility.name}!` });
-      }
-      return acc;
-    }, []);
   }, []);
 
   const exportToPDF = useCallback(() => {
@@ -197,10 +160,6 @@ export default function VeterinaryMedicineDashboard() {
     XLSX.writeFile(workbook, `veterinary_medicine_inventory_${getTimestamp()}.xlsx`);
   }, [medicines, facilityFilter]);
 
-  const dismissAlert = useCallback((id: number) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id));
-  }, []);
-
   const handleDelete = useCallback(async () => {
     if (deleteId === null) return;
     setLoading(true);
@@ -275,8 +234,6 @@ export default function VeterinaryMedicineDashboard() {
     <div className="min-h-screen bg-gray-100 pt-20">
       <Navbar />
       <div className="container mx-auto p-4">
-        <AlertsSection alerts={alerts} onDismiss={dismissAlert} />
-
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
