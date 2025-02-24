@@ -16,6 +16,7 @@ import { Pagination } from "@/components/ui/pagination";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import Navbar from "@/components/Navbar";
 
 const ITEMS_PER_PAGE = 5;
 const MOBILE_BREAKPOINT = 768;
@@ -238,7 +239,7 @@ export default function VeterinaryMedicineDashboard() {
       alert("Please enter a valid positive quantity");
       return;
     }
-  
+
     setLoading(true);
     try {
       const res = await fetch("/api/medicine-usage", {
@@ -246,12 +247,12 @@ export default function VeterinaryMedicineDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ medicineId, quantity }),
       });
-  
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || "Failed to log usage");
       }
-  
+
       const updatedMedicines = await fetch("/api/medicines").then(r => r.json());
       setMedicines(updatedMedicines);
       setSuccessMessage(`Usage of ${quantity} units logged successfully!`);
@@ -282,236 +283,224 @@ export default function VeterinaryMedicineDashboard() {
   const totalStockValue = useMemo(() => totalStock(filteredMedicines), [filteredMedicines]);
 
   return (
-    <div className="container mx-auto p-4">
-      <AlertsSection alerts={alerts} onDismiss={dismissAlert} />
-      <ExportButtons onPDFExport={exportToPDF} onExcelExport={exportToExcel} />
+    <div className="min-h-screen bg-gray-100 pt-20">
+      <Navbar />
+      <div className="container mx-auto p-4">
+        <AlertsSection alerts={alerts} onDismiss={dismissAlert} />
+        <ExportButtons onPDFExport={exportToPDF} onExcelExport={exportToExcel} />
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
-        </div>
-      ) : (
-        <>
-          {successMessage && (
-            <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
-              <AlertTitle>Success</AlertTitle>
-              <AlertDescription>{successMessage}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
-            <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
-              <Package size={14} /> Total Stock: {totalStockValue}
-            </Badge>
-            <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
-              <AlertTriangle size={14} /> Low Stock: {lowStockCount(filteredMedicines)}
-            </Badge>
-            <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
-              <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(filteredMedicines)}
-            </Badge>
-            <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
-              <CalendarX size={14} /> Expired: {expiredCount(filteredMedicines)}
-            </Badge>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
           </div>
+        ) : (
+          <>
+            {successMessage && (
+              <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>{successMessage}</AlertDescription>
+              </Alert>
+            )}
 
-          {filteredMedicines.length > 0 && <MedicineStockChart medicines={filteredMedicines} />}
+            <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
+              <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
+                <Package size={14} /> Total Stock: {totalStockValue}
+              </Badge>
+              <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
+                <AlertTriangle size={14} /> Low Stock: {lowStockCount(filteredMedicines)}
+              </Badge>
+              <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
+                <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(filteredMedicines)}
+              </Badge>
+              <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
+                <CalendarX size={14} /> Expired: {expiredCount(filteredMedicines)}
+              </Badge>
+            </div>
 
-          <Card className="shadow-lg mt-4">
-            <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-              <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
-              <div className="flex items-center gap-2">
-                <select 
-                  value={facilityFilter} 
-                  onChange={(e) => setFacilityFilter(e.target.value)}
-                  className="p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="All">All Facilities</option>
-                  <option value="Dispensary">Dispensaries</option>
-                  <option value="Hospital">Hospitals</option>
-                  <option value="ClinicianCenter">Clinician Centers</option>
-                  <option value="Polyclinic">Polyclinics</option>
-                </select>
-                <Link href="/dashboard/add">
-                  <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
-                </Link>
-              </div>
-            </CardHeader>
+            {filteredMedicines.length > 0 && <MedicineStockChart medicines={filteredMedicines} />}
 
-            <CardContent>
-              {isMobile ? (
-                <div className="space-y-4">
-                  {currentMedicines.map((med) => (
-                    <Card key={med.id} className="p-4 shadow-md">
-                      <h2 className="text-lg font-bold">{med.name}</h2>
-                      <p><strong>Stock:</strong> {med.stock}</p>
-                      <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
-                      <p className={getExpiryColor(med.expiryDate)}>
-                        <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                      </p>
-                      <p><strong>Facility:</strong> {med.facility.name}</p>
-                      <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                        {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                      </Badge>
-                      <div className="mt-2 space-x-2">
-                        <Link href={`/dashboard/edit/${med.id}`}>
-                          <Button size="sm" variant="outline">Edit</Button>
-                        </Link>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          onClick={() => {
-                            setIsModalOpen(true);
-                            setDeleteId(med.id);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <Input
-                          type="number"
-                          placeholder="Today’s Usage"
-                          value={usageInputs[med.id] || ""}
-                          onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                          className="w-24"
-                          min="0"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleUsageSubmit(med.id)}
-                          disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
-                        >
-                          Log Usage
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
+            <Card className="shadow-lg mt-4">
+              <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
+                <div className="flex items-center gap-2">
+                  <select 
+                    value={facilityFilter} 
+                    onChange={(e) => setFacilityFilter(e.target.value)}
+                    className="p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="All">All Facilities</option>
+                    <option value="Dispensary">Dispensaries</option>
+                    <option value="Hospital">Hospitals</option>
+                    <option value="ClinicianCenter">Clinician Centers</option>
+                    <option value="Polyclinic">Polyclinics</option>
+                  </select>
+                  <Link href="/dashboard/add">
+                    <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
+                  </Link>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table className="w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead>Weekly Requirement</TableHead>
-                        <TableHead>Expiry Date</TableHead>
-                        <TableHead>Facility</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Today’s Usage</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentMedicines.map((med) => (
-                        <TableRow key={med.id}>
-                          <TableCell>{med.name}</TableCell>
-                          <TableCell>{med.stock}</TableCell>
-                          <TableCell>{med.weeklyRequirement}</TableCell>
-                          <TableCell className={getExpiryColor(med.expiryDate)}>
-                            {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                          </TableCell>
-                          <TableCell>{med.facility.name}</TableCell>
-                          <TableCell>
-                            <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                              {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                placeholder="Usage"
-                                value={usageInputs[med.id] || ""}
-                                onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                                className="w-20"
-                                min="0"
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleUsageSubmit(med.id)}
-                                disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
-                              >
-                                Log
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="space-x-2">
-                            <Link href={`/dashboard/edit/${med.id}`}>
-                              <Button size="sm" variant="outline">Edit</Button>
-                            </Link>
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              onClick={() => {
-                                setIsModalOpen(true);
-                                setDeleteId(med.id);
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </TableCell>
+              </CardHeader>
+
+              <CardContent>
+                {isMobile ? (
+                  <div className="space-y-4">
+                    {currentMedicines.map((med) => (
+                      <Card key={med.id} className="p-4 shadow-md">
+                        <h2 className="text-lg font-bold">{med.name}</h2>
+                        <p><strong>Stock:</strong> {med.stock}</p>
+                        <p><strong>Weekly Requirement:</strong> {med.weeklyRequirement}</p>
+                        <p className={getExpiryColor(med.expiryDate)}>
+                          <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                        </p>
+                        <p><strong>Facility:</strong> {med.facility.name}</p>
+                        <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                          {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                        </Badge>
+                        <div className="mt-2 space-x-2">
+                          <Link href={`/dashboard/edit/${med.id}`}>
+                            <Button size="sm" variant="outline">Edit</Button>
+                          </Link>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => {
+                              setIsModalOpen(true);
+                              setDeleteId(med.id);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Today’s Usage"
+                            value={usageInputs[med.id] || ""}
+                            onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                            className="w-24"
+                            min="0"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleUsageSubmit(med.id)}
+                            disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                          >
+                            Log Usage
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table className="w-full">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Stock</TableHead>
+                          <TableHead>Weekly Requirement</TableHead>
+                          <TableHead>Expiry Date</TableHead>
+                          <TableHead>Facility</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Today’s Usage</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-              <div className="container mx-auto p-4 pb-2"/>
-              <Pagination 
-                currentPage={currentPage} 
-                totalItems={filteredMedicines.length} 
-                itemsPerPage={ITEMS_PER_PAGE} 
-                setPage={setCurrentPage} 
-              />
-            </CardContent>
-          </Card>
-        </>
-      )}
+                      </TableHeader>
+                      <TableBody>
+                        {currentMedicines.map((med) => (
+                          <TableRow key={med.id}>
+                            <TableCell>{med.name}</TableCell>
+                            <TableCell>{med.stock}</TableCell>
+                            <TableCell>{med.weeklyRequirement}</TableCell>
+                            <TableCell className={getExpiryColor(med.expiryDate)}>
+                              {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                            </TableCell>
+                            <TableCell>{med.facility.name}</TableCell>
+                            <TableCell>
+                              <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                                {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  placeholder="Usage"
+                                  value={usageInputs[med.id] || ""}
+                                  onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                                  className="w-20"
+                                  min="0"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleUsageSubmit(med.id)}
+                                  disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                                >
+                                  Log
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="space-x-2">
+                              <Link href={`/dashboard/edit/${med.id}`}>
+                                <Button size="sm" variant="outline">Edit</Button>
+                              </Link>
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                onClick={() => {
+                                  setIsModalOpen(true);
+                                  setDeleteId(med.id);
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+                <div className="container mx-auto p-4 pb-2"/>
+                <Pagination 
+                  currentPage={currentPage} 
+                  totalItems={filteredMedicines.length} 
+                  itemsPerPage={ITEMS_PER_PAGE} 
+                  setPage={setCurrentPage} 
+                />
+              </CardContent>
+            </Card>
+          </>
+        )}
 
-      <Dialog 
-        open={isModalOpen} 
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) setDeleteId(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <p>Are you sure you want to remove this veterinary medicine?</p>
-          <DialogFooter className="mt-4 flex justify-end space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsModalOpen(false);
-                setDeleteId(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
-        <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-          🏠 <span>Home</span>
-        </Link>
-        <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-          📊 <span>Dashboard</span>
-        </Link>
-        <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-          ➕ <span>Add Medicine</span>
-        </Link>
-        <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-          🏢 <span>Add Facility</span>
-        </Link>
-      </footer>
+        <Dialog 
+          open={isModalOpen} 
+          onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) setDeleteId(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Delete</DialogTitle>
+            </DialogHeader>
+            <p>Are you sure you want to remove this veterinary medicine?</p>
+            <DialogFooter className="mt-4 flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setDeleteId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }
