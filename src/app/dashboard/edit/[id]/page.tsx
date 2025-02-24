@@ -1,191 +1,158 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Navbar from "@/components/Navbar"; // Add this import
 
 export default function EditMedicine() {
-  const router = useRouter();
-  const { id } = useParams();
-  
-  // State Variables
-  const [name, setName] = useState("");
-  const [stock, setStock] = useState<number | "">("");
-  const [weeklyRequirement, setWeeklyRequirement] = useState<number | "">("");
-  const [expiryDate, setExpiryDate] = useState<string | "">("");
-  const [facilities, setFacilities] = useState<{ id: string; name: string }[]>([]); // ✅ Store facilities list
-  const [selectedFacility, setSelectedFacility] = useState<string | null>(null); // ✅ Store selected facility
+  const [medicine, setMedicine] = useState({
+    name: "",
+    stock: "",
+    weeklyRequirement: "",
+    expiryDate: "",
+    facilityId: "",
+  });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [facilities, setFacilities] = useState<{ id: number; name: string }[]>([]);
+  const router = useRouter();
+  const { id } = useParams(); // Get the medicine ID from the URL
 
-  // Fetch Medicine and Facilities
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-
-      // Fetch facilities for dropdown
-      const facilitiesRes = await fetch(`/api/facilities`);
-      if (facilitiesRes.ok) {
-        const facilitiesData = await facilitiesRes.json();
-        setFacilities(facilitiesData);
+    const fetchMedicine = async () => {
+      try {
+        const res = await fetch(`/api/medicines/${id}`);
+        if (!res.ok) throw new Error("Failed to fetch medicine");
+        const data = await res.json();
+        setMedicine({
+          name: data.name,
+          stock: data.stock.toString(),
+          weeklyRequirement: data.weeklyRequirement.toString(),
+          expiryDate: data.expiryDate ? data.expiryDate.split("T")[0] : "", // Format for date input
+          facilityId: data.facilityId.toString(),
+        });
+      } catch (error) {
+        console.error("Error fetching medicine:", error);
+        setErrorMessage("Failed to load medicine data.");
+        setTimeout(() => setErrorMessage(null), 3000);
       }
+    };
 
-      // Fetch medicine details
-      const medicineRes = await fetch(`/api/medicines/${id}`);
-      if (medicineRes.ok) {
-        const data = await medicineRes.json();
-        setName(data.name);
-        setStock(data.stock);
-        setWeeklyRequirement(data.weeklyRequirement);
-        setExpiryDate(data.expiryDate ? data.expiryDate.split("T")[0] : "");
-        setSelectedFacility(data.facilityId || null); // ✅ Set selected facility
+    const fetchFacilities = async () => {
+      try {
+        const res = await fetch("/api/facilities");
+        if (!res.ok) throw new Error("Failed to fetch facilities");
+        const data = await res.json();
+        setFacilities(data);
+      } catch (error) {
+        console.error("Error fetching facilities:", error);
+        setErrorMessage("Failed to load facilities.");
+        setTimeout(() => setErrorMessage(null), 3000);
       }
+    };
 
-      setLoading(false);
-    }
-
-    fetchData();
+    fetchMedicine();
+    fetchFacilities();
   }, [id]);
 
-  // Handle Form Submission
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!medicine.name || !medicine.stock || !medicine.weeklyRequirement || !medicine.facilityId) {
+      setErrorMessage("Please fill all required fields.");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
+    }
 
     const res = await fetch(`/api/medicines/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
-        stock: Number(stock),
-        weeklyRequirement: Number(weeklyRequirement),
-        expiryDate: expiryDate ? new Date(expiryDate).toISOString() : null,
-        facilityId: selectedFacility, // ✅ Send selected facility ID
+        name: medicine.name,
+        stock: parseInt(medicine.stock),
+        weeklyRequirement: parseInt(medicine.weeklyRequirement),
+        expiryDate: medicine.expiryDate || null,
+        facilityId: parseInt(medicine.facilityId),
       }),
     });
 
-    if (res.ok) {
-      setSuccessMessage("Medicine updated successfully!");
-      setTimeout(() => {
-        router.refresh();
-        router.push("/dashboard");
-      }, 2000);
+    if (!res.ok) {
+      setErrorMessage("Failed to update medicine.");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
     }
-  }
+
+    setSuccessMessage("Medicine updated successfully!");
+    setTimeout(() => {
+      setSuccessMessage(null);
+      router.push("/dashboard");
+    }, 2000);
+  };
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen p-4">
-      {successMessage && (
-        <Alert className="mb-4 bg-blue-100 border-l-4 border-blue-500 text-blue-700 w-full max-w-md">
-          <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
-        </div>
-      ) : (
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader>
-            <h1 className="text-2xl font-bold text-center">Edit Medicine</h1>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Medicine Name */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Medicine Name</label>
-                <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-              </div>
-
-              {/* Stock */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Stock</label>
-                <Input
-                  type="number"
-                  value={stock}
-                  onChange={(e) => setStock(e.target.value === "" ? "" : Number(e.target.value))}
-                  required
-                />
-              </div>
-
-              {/* Weekly Requirement */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Weekly Requirement</label>
-                <Input
-                  type="number"
-                  value={weeklyRequirement}
-                  onChange={(e) =>
-                    setWeeklyRequirement(e.target.value === "" ? "" : Number(e.target.value))
-                  }
-                  required
-                />
-              </div>
-
-              {/* Expiry Date */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Expiry Date</label>
-                <Input
-                  type="date"
-                  value={expiryDate}
-                  onChange={(e) => setExpiryDate(e.target.value)}
-                />
-              </div>
-
-              {/* Facilities Dropdown */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Facility</label>
-                <Select
-                  value={selectedFacility || ""}
-                  onValueChange={(value) => setSelectedFacility(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a facility" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {facilities.map((facility) => (
-                      <SelectItem key={facility.id} value={facility.id}>
-                        {facility.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Buttons */}
-              <CardFooter className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Update Medicine
-                </Button>
-              </CardFooter>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-      {/* Sleek Black Footer */}
-<footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
-  <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    🏠 <span>Home</span>
-  </Link>
-  <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    📊 <span>Dashboard</span>
-  </Link>
-  <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    ➕ <span>Add Medicine</span>
-  </Link>
-  <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    🏢 <span>Add Facility</span>
-  </Link>
-</footer>
+    <div className="min-h-screen bg-gray-100 pt-20"> {/* Add pt-20 for navbar offset */}
+      <Navbar /> {/* Add Navbar */}
+      <div className="max-w-md mx-auto p-6 bg-white shadow-md rounded-md">
+        <h2 className="text-lg font-semibold mb-4">Edit Veterinary Medicine</h2>
+        {successMessage && (
+          <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{successMessage}</AlertDescription>
+          </Alert>
+        )}
+        {errorMessage && (
+          <Alert className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            placeholder="Medicine Name"
+            value={medicine.name}
+            onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
+          />
+          <Input
+            type="number"
+            placeholder="Stock"
+            value={medicine.stock}
+            onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
+            min="0"
+          />
+          <Input
+            type="number"
+            placeholder="Weekly Requirement"
+            value={medicine.weeklyRequirement}
+            onChange={(e) => setMedicine({ ...medicine, weeklyRequirement: e.target.value })}
+            min="0"
+          />
+          <Input
+            type="date"
+            placeholder="Expiry Date"
+            value={medicine.expiryDate}
+            onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
+          />
+          <select
+            value={medicine.facilityId}
+            onChange={(e) => setMedicine({ ...medicine, facilityId: e.target.value })}
+            className="w-full p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="" disabled>Select Facility</option>
+            {facilities.map((facility) => (
+              <option key={facility.id} value={facility.id}>{facility.name}</option>
+            ))}
+          </select>
+          <div className="flex space-x-2">
+            <Button type="submit" className="flex-1">Update Medicine</Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
