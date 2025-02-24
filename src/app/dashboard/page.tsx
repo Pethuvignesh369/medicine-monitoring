@@ -11,7 +11,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
 import jsPDF from "jspdf";
@@ -50,8 +50,7 @@ export default function VeterinaryMedicineDashboard() {
   const [isMobile, setIsMobile] = useState(false);
   const [facilityFilter, setFacilityFilter] = useState<string>("All");
   const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false); // New state for expansion
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const router = useRouter();
 
@@ -236,28 +235,19 @@ export default function VeterinaryMedicineDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "fixed top-0 left-0 h-full bg-gradient-to-b from-blue-900 to-teal-800 text-white shadow-lg z-20 transition-all duration-300 ease-in-out",
-          isMobile ? (isSidebarOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full") : (isSidebarExpanded ? "w-64" : "w-16")
-        )}
-      >
-        <div className={cn(
-          "flex items-center p-4 border-b border-teal-700",
-          isSidebarExpanded || isMobile ? "justify-between" : "justify-center"
-        )}>
-          {(isSidebarExpanded || isMobile) && <h2 className="text-xl font-bold">VetMed</h2>}
-          {isMobile ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarOpen(false)}
-              className="text-white hover:text-teal-300"
-            >
-              <X className="w-6 h-6" />
-            </Button>
-          ) : (
+      {/* Sidebar (Desktop Only) */}
+      {!isMobile && (
+        <div
+          className={cn(
+            "fixed top-0 left-0 h-full bg-gradient-to-b from-blue-900 to-teal-800 text-white shadow-lg z-20 transition-all duration-300 ease-in-out",
+            isSidebarExpanded ? "w-64" : "w-16"
+          )}
+        >
+          <div className={cn(
+            "flex items-center p-4 border-b border-teal-700",
+            isSidebarExpanded ? "justify-between" : "justify-center"
+          )}>
+            {isSidebarExpanded && <h2 className="text-xl font-bold">Menu</h2>}
             <Button
               variant="ghost"
               size="icon"
@@ -266,72 +256,56 @@ export default function VeterinaryMedicineDashboard() {
             >
               {isSidebarExpanded ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
             </Button>
-          )}
+          </div>
+          <nav className="p-4 space-y-2">
+            <Link
+              href="/"
+              className={cn(
+                "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
+                !isSidebarExpanded && "justify-center"
+              )}
+            >
+              <Home className="w-5 h-5" />
+              {isSidebarExpanded && <span>Home</span>}
+            </Link>
+            <Link
+              href="/dashboard"
+              className={cn(
+                "flex items-center gap-2 p-2 rounded-md bg-white/20 hover:bg-white/30 transition-all duration-200",
+                !isSidebarExpanded && "justify-center"
+              )}
+            >
+              <BarChart2 className="w-5 h-5" />
+              {isSidebarExpanded && <span>Dashboard</span>}
+            </Link>
+            <Link
+              href="/dashboard/add"
+              className={cn(
+                "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
+                !isSidebarExpanded && "justify-center"
+              )}
+            >
+              <PlusCircle className="w-5 h-5" />
+              {isSidebarExpanded && <span>Add Medicine</span>}
+            </Link>
+            <Link
+              href="/admin/facilities"
+              className={cn(
+                "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
+                !isSidebarExpanded && "justify-center"
+              )}
+            >
+              <Building2 className="w-5 h-5" />
+              {isSidebarExpanded && <span>Add Facility</span>}
+            </Link>
+          </nav>
         </div>
-        <nav className="p-4 space-y-2">
-          <Link
-            href="/"
-            className={cn(
-              "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
-              !isSidebarExpanded && !isMobile && "justify-center"
-            )}
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <Home className="w-5 h-5" />
-            {(isSidebarExpanded || isMobile) && <span>Home</span>}
-          </Link>
-          <Link
-            href="/dashboard"
-            className={cn(
-              "flex items-center gap-2 p-2 rounded-md bg-white/20 hover:bg-white/30 transition-all duration-200",
-              !isSidebarExpanded && !isMobile && "justify-center"
-            )}
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <BarChart2 className="w-5 h-5" />
-            {(isSidebarExpanded || isMobile) && <span>Dashboard</span>}
-          </Link>
-          <Link
-            href="/dashboard/add"
-            className={cn(
-              "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
-              !isSidebarExpanded && !isMobile && "justify-center"
-            )}
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <PlusCircle className="w-5 h-5" />
-            {(isSidebarExpanded || isMobile) && <span>Add Medicine</span>}
-          </Link>
-          <Link
-            href="/admin/facilities"
-            className={cn(
-              "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
-              !isSidebarExpanded && !isMobile && "justify-center"
-            )}
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <Building2 className="w-5 h-5" />
-            {(isSidebarExpanded || isMobile) && <span>Add Facility</span>}
-          </Link>
-        </nav>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {isMobile && <Navbar />}
+        {isMobile && <Navbar />} {/* Navbar only on mobile */}
         <div className={cn("p-4", isMobile ? "pt-20" : (isSidebarExpanded ? "pt-0 ml-64" : "pt-0 ml-16"))}>
-          {/* Hamburger Toggle for Mobile */}
-          {isMobile && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="fixed top-20 left-4 z-30 bg-white border-blue-500"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <Menu className="w-6 h-6 text-blue-900" />
-            </Button>
-          )}
-
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
