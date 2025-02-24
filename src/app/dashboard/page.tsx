@@ -22,32 +22,32 @@ const MOBILE_BREAKPOINT = 768;
 const ALERT_TIMEOUT = 3000;
 const EXPIRY_WARNING_DAYS = 7;
 
-// Type Definitions
+// Type Definitions tailored for Veterinary HealthTech
 interface Facility {
   id: number;
-  name: string;
-  type: string;
+  name: string; // e.g., "Dispensary A", "Polyclinic B"
+  type: string; // e.g., "Dispensary", "Hospital", "Clinician Center", "Polyclinic"
 }
 
 interface Medicine {
   id: number;
-  name: string;
-  stock: number;
-  weeklyRequirement: number;
-  expiryDate: string | null;
-  facility: Facility | string;
+  name: string; // e.g., "Antibiotic X", "Vaccine Y"
+  stock: number; // Current stock in units
+  weeklyRequirement: number; // Weekly need based on animal treatment data
+  expiryDate: string | null; // Expiry date of the batch
+  facility: Facility | string; // Facility where medicine is stored
 }
 
 interface Alert {
   id: number;
-  message: string;
+  message: string; // Alerts for low stock or expiry
 }
 
 // Components
 const AlertsSection = ({ alerts, onDismiss }: { alerts: Alert[], onDismiss: (id: number) => void }) => (
   alerts.length > 0 && (
     <div className="mb-4">
-      <h2 className="text-lg font-bold mb-2">🚨 Automated Alerts</h2>
+      <h2 className="text-lg font-bold mb-2">🚨 Veterinary Medicine Alerts</h2>
       {alerts.map((alert) => (
         <Alert key={alert.id} className="flex items-center justify-between bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 mb-2">
           <div>
@@ -77,7 +77,7 @@ const ExportButtons = ({ onPDFExport, onExcelExport }: {
   </div>
 );
 
-export default function DashboardPage() {
+export default function VeterinaryMedicineDashboard() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -86,7 +86,6 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -94,15 +93,15 @@ export default function DashboardPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/medicines");
-        if (!res.ok) throw new Error('Failed to fetch');
+        const res = await fetch("/api/medicines"); // API endpoint for veterinary medicine data
+        if (!res.ok) throw new Error('Failed to fetch veterinary medicine data');
         const data = await res.json();
         if (mounted) {
           setMedicines(data);
           setAlerts(generateAlerts(data));
         }
       } catch (error) {
-        console.error("Error fetching medicines:", error);
+        console.error("Error fetching veterinary medicines:", error);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -123,9 +122,9 @@ export default function DashboardPage() {
   const generateAlerts = useCallback((meds: Medicine[]): Alert[] => {
     return meds.reduce((acc: Alert[], med) => {
       if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
-        acc.push({ id: med.id, message: `⚠️ ${med.name} is expired!` });
+        acc.push({ id: med.id, message: `⚠️ ${med.name} is expired at ${typeof med.facility === "object" ? med.facility.name : med.facility}!` });
       } else if (med.stock < med.weeklyRequirement) {
-        acc.push({ id: med.id, message: `⚠️ ${med.name} is running low on stock!` });
+        acc.push({ id: med.id, message: `⚠️ ${med.name} is running low at ${typeof med.facility === "object" ? med.facility.name : med.facility}!` });
       }
       return acc;
     }, []);
@@ -141,8 +140,8 @@ export default function DashboardPage() {
       expired: medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate)
     };
 
-    doc.text("Medicine Inventory Report", 14, 10);
-    doc.text(`Total Stock: ${tableData.totalStock}`, 14, 20);
+    doc.text("Veterinary Medicine Inventory Report", 14, 10);
+    doc.text(`Total Stock Across Facilities: ${tableData.totalStock}`, 14, 20);
 
     autoTable(doc, {
       startY: 30,
@@ -170,7 +169,7 @@ export default function DashboardPage() {
       });
     }
 
-    doc.save(`medicine_inventory_${getTimestamp()}.pdf`);
+    doc.save(`veterinary_medicine_inventory_${getTimestamp()}.pdf`);
   }, [medicines]);
 
   const exportToExcel = useCallback(() => {
@@ -180,7 +179,7 @@ export default function DashboardPage() {
     const nonExpired = medicines.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate);
 
     const data = [
-      { Name: "Total Stock", Stock: totalStock },
+      { Name: "Total Stock Across Facilities", Stock: totalStock },
       { Name: "Available Medicines" },
       ...nonExpired.map(med => ({
         Name: med.name,
@@ -201,8 +200,8 @@ export default function DashboardPage() {
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Medicine Inventory");
-    XLSX.writeFile(workbook, `medicine_inventory_${getTimestamp()}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Veterinary Inventory");
+    XLSX.writeFile(workbook, `veterinary_medicine_inventory_${getTimestamp()}.xlsx`);
   }, [medicines]);
 
   const dismissAlert = useCallback((id: number) => {
@@ -216,7 +215,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/medicines/${deleteId}`, { method: "DELETE" });
       if (res.ok) {
         setMedicines(prev => prev.filter(med => med.id !== deleteId));
-        setSuccessMessage("Medicine deleted successfully!");
+        setSuccessMessage("Medicine removed successfully!");
         setTimeout(() => setSuccessMessage(null), ALERT_TIMEOUT);
         setIsModalOpen(false);
         setDeleteId(null);
@@ -224,7 +223,7 @@ export default function DashboardPage() {
         throw new Error("Failed to delete");
       }
     } catch (error) {
-      alert("Failed to delete the medicine. Please try again.");
+      alert("Failed to remove the medicine. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -276,7 +275,7 @@ export default function DashboardPage() {
 
           <Card className="shadow-lg mt-4">
             <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center">
-              <h1 className="text-xl md:text-2xl font-bold">Medicine Dashboard</h1>
+              <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
               <Link href="/dashboard/add">
                 <Button className="bg-green-600 hover:bg-green-700 mt-2 md:mt-0">+ Add Medicine</Button>
               </Link>
@@ -388,7 +387,7 @@ export default function DashboardPage() {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
-          <p>Are you sure you want to delete this medicine?</p>
+          <p>Are you sure you want to remove this veterinary medicine?</p>
           <DialogFooter className="mt-4 flex justify-end space-x-2">
             <Button 
               variant="outline" 
