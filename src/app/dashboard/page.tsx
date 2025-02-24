@@ -25,17 +25,17 @@ const EXPIRY_WARNING_DAYS = 7;
 // Type Definitions tailored for Veterinary HealthTech
 interface Facility {
   id: number;
-  name: string; // e.g., "Dispensary A", "Polyclinic B"
-  type: string; // e.g., "Dispensary", "Hospital", "Clinician Center", "Polyclinic"
+  name: string; // e.g., "Chennai Veterinary Dispensary", "Madurai Animal Hospital"
+  type: string; // "Dispensary", "Hospital", "Clinician Center", "Polyclinic"
 }
 
 interface Medicine {
   id: number;
-  name: string; // e.g., "Antibiotic X", "Vaccine Y"
+  name: string; // e.g., "Oxytetracycline", "Rabies Vaccine"
   stock: number; // Current stock in units
   weeklyRequirement: number; // Weekly need based on animal treatment data
-  expiryDate: string | null; // Expiry date of the batch
-  facility: Facility | string; // Facility where medicine is stored
+  expiryDate: string | null; // Expiry date in ISO format (e.g., "2025-03-01")
+  facility: Facility; // Facility object from API
 }
 
 interface Alert {
@@ -86,6 +86,7 @@ export default function VeterinaryMedicineDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [facilityFilter, setFacilityFilter] = useState<string>("All");
 
   useEffect(() => {
     let mounted = true;
@@ -93,7 +94,7 @@ export default function VeterinaryMedicineDashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/medicines"); // API endpoint for veterinary medicine data
+        const res = await fetch("/api/medicines"); // Fetch medicines with facility data from your backend
         if (!res.ok) throw new Error('Failed to fetch veterinary medicine data');
         const data = await res.json();
         if (mounted) {
@@ -122,9 +123,9 @@ export default function VeterinaryMedicineDashboard() {
   const generateAlerts = useCallback((meds: Medicine[]): Alert[] => {
     return meds.reduce((acc: Alert[], med) => {
       if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
-        acc.push({ id: med.id, message: `⚠️ ${med.name} is expired at ${typeof med.facility === "object" ? med.facility.name : med.facility}!` });
+        acc.push({ id: med.id, message: `⚠️ ${med.name} is expired at ${med.facility.name}!` });
       } else if (med.stock < med.weeklyRequirement) {
-        acc.push({ id: med.id, message: `⚠️ ${med.name} is running low at ${typeof med.facility === "object" ? med.facility.name : med.facility}!` });
+        acc.push({ id: med.id, message: `⚠️ ${med.name} is running low at ${med.facility.name}!` });
       }
       return acc;
     }, []);
@@ -134,14 +135,16 @@ export default function VeterinaryMedicineDashboard() {
     const doc = new jsPDF();
     const currentDate = new Date();
     
+    const filteredMeds = facilityFilter === "All" ? medicines : medicines.filter(med => med.facility.type === facilityFilter);
+    
     const tableData = {
-      totalStock: medicines.reduce((sum, med) => sum + med.stock, 0),
-      nonExpired: medicines.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate),
-      expired: medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate)
+      totalStock: filteredMeds.reduce((sum, med) => sum + med.stock, 0),
+      nonExpired: filteredMeds.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate),
+      expired: filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate)
     };
 
     doc.text("Veterinary Medicine Inventory Report", 14, 10);
-    doc.text(`Total Stock Across Facilities: ${tableData.totalStock}`, 14, 20);
+    doc.text(`Total Stock Across ${facilityFilter === "All" ? "All Facilities" : facilityFilter}: ${tableData.totalStock}`, 14, 20);
 
     autoTable(doc, {
       startY: 30,
@@ -151,7 +154,7 @@ export default function VeterinaryMedicineDashboard() {
         med.stock,
         med.weeklyRequirement,
         med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-        typeof med.facility === "object" ? med.facility.name : med.facility
+        med.facility.name
       ]),
     });
 
@@ -164,29 +167,31 @@ export default function VeterinaryMedicineDashboard() {
           med.name,
           med.stock,
           med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-          typeof med.facility === "object" ? med.facility.name : med.facility
+          med.facility.name
         ]),
       });
     }
 
     doc.save(`veterinary_medicine_inventory_${getTimestamp()}.pdf`);
-  }, [medicines]);
+  }, [medicines, facilityFilter]);
 
   const exportToExcel = useCallback(() => {
-    const totalStock = medicines.reduce((sum, med) => sum + med.stock, 0);
+    const filteredMeds = facilityFilter === "All" ? medicines : medicines.filter(med => med.facility.type === facilityFilter);
+    
+    const totalStock = filteredMeds.reduce((sum, med) => sum + med.stock, 0);
     const currentDate = new Date();
-    const expired = medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
-    const nonExpired = medicines.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate);
+    const expired = filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
+    const nonExpired = filteredMeds.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate);
 
     const data = [
-      { Name: "Total Stock Across Facilities", Stock: totalStock },
+      { Name: `Total Stock Across ${facilityFilter === "All" ? "All Facilities" : facilityFilter}`, Stock: totalStock },
       { Name: "Available Medicines" },
       ...nonExpired.map(med => ({
         Name: med.name,
         Stock: med.stock,
         "Weekly Requirement": med.weeklyRequirement,
         "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-        Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
+        Facility: med.facility.name,
       })),
       ...(expired.length ? [{ Name: "Expired Medicines" }] : []),
       ...expired.map(med => ({
@@ -194,7 +199,7 @@ export default function VeterinaryMedicineDashboard() {
         Stock: med.stock,
         "Weekly Requirement": "",
         "Expiry Date": med.expiryDate ? formatDate(med.expiryDate) : "N/A",
-        Facility: typeof med.facility === "object" ? med.facility.name : med.facility,
+        Facility: med.facility.name,
       }))
     ];
 
@@ -202,7 +207,7 @@ export default function VeterinaryMedicineDashboard() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Veterinary Inventory");
     XLSX.writeFile(workbook, `veterinary_medicine_inventory_${getTimestamp()}.xlsx`);
-  }, [medicines]);
+  }, [medicines, facilityFilter]);
 
   const dismissAlert = useCallback((id: number) => {
     setAlerts(prev => prev.filter(alert => alert.id !== id));
@@ -229,14 +234,19 @@ export default function VeterinaryMedicineDashboard() {
     }
   }, [deleteId]);
 
-  // Memoized calculations
+  // Memoized calculations with filter applied
+  const filteredMedicines = useMemo(() => {
+    if (facilityFilter === "All") return medicines;
+    return medicines.filter(med => med.facility.type === facilityFilter);
+  }, [medicines, facilityFilter]);
+
   const currentMedicines = useMemo(() => {
     const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
     const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-    return medicines.slice(indexOfFirstItem, indexOfLastItem);
-  }, [medicines, currentPage]);
+    return filteredMedicines.slice(indexOfFirstItem, indexOfLastItem);
+  }, [filteredMedicines, currentPage]);
 
-  const totalStockValue = useMemo(() => totalStock(medicines), [medicines]);
+  const totalStockValue = useMemo(() => totalStock(filteredMedicines), [filteredMedicines]);
 
   return (
     <div className="container mx-auto p-4">
@@ -261,24 +271,37 @@ export default function VeterinaryMedicineDashboard() {
               <Package size={14} /> Total Stock: {totalStockValue}
             </Badge>
             <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
-              <AlertTriangle size={14} /> Low Stock: {lowStockCount(medicines)}
+              <AlertTriangle size={14} /> Low Stock: {lowStockCount(filteredMedicines)}
             </Badge>
             <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
-              <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(medicines)}
+              <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(filteredMedicines)}
             </Badge>
             <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
-              <CalendarX size={14} /> Expired: {expiredCount(medicines)}
+              <CalendarX size={14} /> Expired: {expiredCount(filteredMedicines)}
             </Badge>
           </div>
 
-          {medicines.length > 0 && <MedicineStockChart medicines={medicines} />}
+          {filteredMedicines.length > 0 && <MedicineStockChart medicines={filteredMedicines} />}
 
           <Card className="shadow-lg mt-4">
-            <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center">
+            <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
               <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
-              <Link href="/dashboard/add">
-                <Button className="bg-green-600 hover:bg-green-700 mt-2 md:mt-0">+ Add Medicine</Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <select 
+                  value={facilityFilter} 
+                  onChange={(e) => setFacilityFilter(e.target.value)}
+                  className="p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="All">All Facilities</option>
+                  <option value="Dispensary">Dispensaries</option>
+                  <option value="Hospital">Hospitals</option>
+                  <option value="Clinician Center">Clinician Centers</option>
+                  <option value="Polyclinic">Polyclinics</option>
+                </select>
+                <Link href="/dashboard/add">
+                  <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
+                </Link>
+              </div>
             </CardHeader>
 
             <CardContent>
@@ -292,7 +315,7 @@ export default function VeterinaryMedicineDashboard() {
                       <p className={getExpiryColor(med.expiryDate)}>
                         <strong>Expiry Date:</strong> {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
                       </p>
-                      <p><strong>Facility:</strong> {typeof med.facility === "object" ? med.facility.name : med.facility}</p>
+                      <p><strong>Facility:</strong> {med.facility.name}</p>
                       <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
                         {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
                       </Badge>
@@ -337,7 +360,7 @@ export default function VeterinaryMedicineDashboard() {
                           <TableCell className={getExpiryColor(med.expiryDate)}>
                             {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
                           </TableCell>
-                          <TableCell>{typeof med.facility === "object" ? med.facility.name : med.facility}</TableCell>
+                          <TableCell>{med.facility.name}</TableCell>
                           <TableCell>
                             <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
                               {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
@@ -367,7 +390,7 @@ export default function VeterinaryMedicineDashboard() {
               <div className="container mx-auto p-4 pb-2"/>
               <Pagination 
                 currentPage={currentPage} 
-                totalItems={medicines.length} 
+                totalItems={filteredMedicines.length} 
                 itemsPerPage={ITEMS_PER_PAGE} 
                 setPage={setCurrentPage} 
               />
@@ -404,7 +427,7 @@ export default function VeterinaryMedicineDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="container mx-auto p-4 pb-6"/>
+
       <footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
         <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
           🏠 <span>Home</span>
