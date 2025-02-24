@@ -103,75 +103,95 @@ export default function AddMedicine() {
             </Alert>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              placeholder="Medicine Name"
-              value={medicine.name}
-              onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Stock"
-              value={medicine.stock}
-              onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
-              min="0"
-            />
-            <Input
-              type="number"
-              placeholder="Weekly Requirement"
-              value={medicine.weeklyRequirement}
-              onChange={(e) => setMedicine({ ...medicine, weeklyRequirement: e.target.value })}
-              min="0"
-            />
-            <Input
-              type="date"
-              placeholder="Expiry Date"
-              value={medicine.expiryDate}
-              onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
-            />
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  className="w-full justify-between"
-                >
-                  {medicine.facilityId
-                    ? facilities.find((f) => f.id === parseInt(medicine.facilityId))?.name
-                    : "Select Facility"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search facility..." />
-                  <CommandList>
-                    <CommandEmpty>No facility found.</CommandEmpty>
-                    {facilities.map((facility) => (
-                      <CommandItem
-                        key={facility.id}
-                        value={`${facility.name} (${facility.type})`}
-                        onSelect={() => {
-                          setMedicine({
-                            ...medicine,
-                            facilityId: facility.id.toString(),
-                          });
-                          setOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            medicine.facilityId === facility.id.toString() ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {facility.name} ({facility.type})
-                      </CommandItem>
-                    ))}
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">Medicine Name</label>
+              <Input
+                id="name"
+                placeholder="Enter medicine name"
+                value={medicine.name}
+                onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="stock" className="block text-sm font-medium text-gray-700">Stock</label>
+              <Input
+                id="stock"
+                type="number"
+                placeholder="Enter stock quantity"
+                value={medicine.stock}
+                onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
+                min="0"
+              />
+            </div>
+            <div>
+              <label htmlFor="weeklyRequirement" className="block text-sm font-medium text-gray-700">Weekly Requirement</label>
+              <Input
+                id="weeklyRequirement"
+                type="number"
+                placeholder="Enter weekly requirement"
+                value={medicine.weeklyRequirement}
+                onChange={(e) => setMedicine({ ...medicine, weeklyRequirement: e.target.value })}
+                min="0"
+              />
+            </div>
+            <div>
+              <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700">Expiry Date</label>
+              <Input
+                id="expiryDate"
+                type="date"
+                placeholder="Select expiry date"
+                value={medicine.expiryDate}
+                onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="facility" className="block text-sm font-medium text-gray-700">Facility</label>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="facility"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {medicine.facilityId
+                      ? facilities.find((f) => f.id === parseInt(medicine.facilityId))?.name
+                      : "Select Facility"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search facility..." />
+                    <CommandList>
+                      <CommandEmpty>No facility found.</CommandEmpty>
+                      {facilities.map((facility) => (
+                        <CommandItem
+                          key={facility.id}
+                          value={`${facility.name} (${facility.type})`}
+                          onSelect={() => {
+                            setMedicine({
+                              ...medicine,
+                              facilityId: facility.id.toString(),
+                            });
+                            setOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              medicine.facilityId === facility.id.toString() ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {facility.name} ({facility.type})
+                        </CommandItem>
+                      ))}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
             <div className="flex space-x-2">
               <Button type="submit" className="flex-1">Add Medicine</Button>
               <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>

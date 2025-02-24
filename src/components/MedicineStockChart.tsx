@@ -32,7 +32,6 @@ type MedicineStockChartProps = {
   medicines: Medicine[];
 };
 
-// Custom type for Legend payload based on Recharts' expectations
 type LegendPayload = {
   value: string;
   type: "square" | "line" | "circle" | "cross" | "diamond" | "star" | "triangle" | "wye" | "rect";
@@ -40,17 +39,15 @@ type LegendPayload = {
   color: string;
 };
 
-// Facility-based color mapping
+// Updated facility color mapping with lighter, softer colors
 const facilityColors: { [key: string]: string } = {
-  Dispensary: "#A5D6A7",     // Lighter Green
-  Hospital: "#9FA8DA",       // Lighter Indigo
-  "Clinician Center": "#FFE082", // Lighter Amber
-  Polyclinic: "#CE93D8",     // Lighter Purple
-  Expired: "#EF9A9A",        // Lighter Red
-  "Expiring Soon": "#F48FB1", // Lighter Pink
+  Dispensary: "#81C784",     // Light Green
+  Hospital: "#64B5F6",       // Light Blue
+  "Clinician Center": "#FFD54F", // Light Yellow
+  Polyclinic: "#CE93D8",     // Light Purple
+  Expired: "#FFAB91",        // Light Coral
+  "Expiring Soon": "#F8BBD0", // Very Light Pink
 };
-
-
 
 // Check if medicine is expiring soon (within 7 days)
 const isExpiringSoon = (expiryDate: string | null) => {
@@ -76,7 +73,7 @@ export default function MedicineStockChart({ medicines }: MedicineStockChartProp
         ? facilityColors["Expired"]
         : expiringSoon
         ? facilityColors["Expiring Soon"]
-        : facilityColors[med.facility.type] || "#EC4899", // Default color if type not found
+        : facilityColors[med.facility.type] || "#F06292", // Default light pink if type not found
     };
   });
 
@@ -97,7 +94,7 @@ export default function MedicineStockChart({ medicines }: MedicineStockChartProp
     return null;
   };
 
-  // Generate dynamic legend payload with custom LegendPayload type
+  // Generate dynamic legend payload
   const legendPayload: LegendPayload[] = [
     { value: "Dispensary", type: "square", id: "Dispensary", color: facilityColors["Dispensary"] },
     { value: "Hospital", type: "square", id: "Hospital", color: facilityColors["Hospital"] },

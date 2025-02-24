@@ -64,11 +64,17 @@ export default function AddFacility() {
           </Alert>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            placeholder="Facility Name (e.g., Chennai Veterinary Dispensary)"
-            value={facility.name}
-            onChange={(e) => setFacility({ ...facility, name: e.target.value })}
-          />
+          <div>
+            <label htmlFor="facilityName" className="block text-sm font-medium text-gray-700 mb-1">
+              Facility Name
+            </label>
+            <Input
+              id="facilityName"
+              placeholder="e.g., Chennai Veterinary Dispensary"
+              value={facility.name}
+              onChange={(e) => setFacility({ ...facility, name: e.target.value })}
+            />
+          </div>
           <div>
             <label htmlFor="facilityType" className="block text-sm font-medium text-gray-700 mb-1">
               Facility Type

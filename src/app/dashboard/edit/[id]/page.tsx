@@ -5,16 +5,28 @@ import { useRouter, useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandItem,
-  CommandEmpty,
-} from "@/components/ui/command";
+import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
-import cn from "classnames";
+import Navbar from "@/components/Navbar";
+import { cn } from "@/lib/utils";
+
+const ALERT_TIMEOUT = 3000;
+
+interface Facility {
+  id: number;
+  name: string;
+  type: string;
+}
+
+interface Medicine {
+  id: number;
+  name: string;
+  stock: number;
+  weeklyRequirement: number;
+  expiryDate: string | null;
+  facilityId: number;
+}
 
 export default function EditMedicine() {
   const [medicine, setMedicine] = useState({
@@ -26,9 +38,7 @@ export default function EditMedicine() {
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [facilities, setFacilities] = useState<
-    { id: number; name: string; type: string }[]
-  >([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { id } = useParams();
@@ -37,19 +47,19 @@ export default function EditMedicine() {
     const fetchMedicine = async () => {
       try {
         const res = await fetch(`/api/medicines/${id}`);
-        if (!res.ok) throw new Error("Failed to fetch medicine");
-        const data = await res.json();
+        if (!res.ok) throw new Error("Failed to fetch medicine data");
+        const data: Medicine = await res.json();
         setMedicine({
           name: data.name,
           stock: data.stock.toString(),
           weeklyRequirement: data.weeklyRequirement.toString(),
-          expiryDate: data.expiryDate ? data.expiryDate.split("T")[0] : "",
+          expiryDate: data.expiryDate ? data.expiryDate.split("T")[0] : "", // Format for date input
           facilityId: data.facilityId.toString(),
         });
       } catch (error) {
         console.error("Error fetching medicine:", error);
         setErrorMessage("Failed to load medicine data.");
-        setTimeout(() => setErrorMessage(null), 3000);
+        setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
       }
     };
 
@@ -62,7 +72,7 @@ export default function EditMedicine() {
       } catch (error) {
         console.error("Error fetching facilities:", error);
         setErrorMessage("Failed to load facilities.");
-        setTimeout(() => setErrorMessage(null), 3000);
+        setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
       }
     };
 
@@ -73,14 +83,9 @@ export default function EditMedicine() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !medicine.name ||
-      !medicine.stock ||
-      !medicine.weeklyRequirement ||
-      !medicine.facilityId
-    ) {
+    if (!medicine.name || !medicine.stock || !medicine.weeklyRequirement || !medicine.facilityId) {
       setErrorMessage("Please fill all required fields.");
-      setTimeout(() => setErrorMessage(null), 3000);
+      setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
       return;
     }
 
@@ -98,7 +103,7 @@ export default function EditMedicine() {
 
     if (!res.ok) {
       setErrorMessage("Failed to update medicine.");
-      setTimeout(() => setErrorMessage(null), 3000);
+      setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
       return;
     }
 
@@ -106,117 +111,129 @@ export default function EditMedicine() {
     setTimeout(() => {
       setSuccessMessage(null);
       router.push("/dashboard");
-    }, 2000);
+    }, ALERT_TIMEOUT);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pt-20">
-      <div className="max-w-md mx-auto p-6 bg-white shadow-md rounded-md">
-        <h2 className="text-lg font-semibold mb-4">Edit Veterinary Medicine</h2>
-        {successMessage && (
-          <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{successMessage}</AlertDescription>
-          </Alert>
-        )}
-        {errorMessage && (
-          <Alert className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            placeholder="Medicine Name"
-            value={medicine.name}
-            onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
-          />
-          <Input
-            type="number"
-            placeholder="Stock"
-            value={medicine.stock}
-            onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
-            min="0"
-          />
-          <Input
-            type="number"
-            placeholder="Weekly Requirement"
-            value={medicine.weeklyRequirement}
-            onChange={(e) =>
-              setMedicine({ ...medicine, weeklyRequirement: e.target.value })
-            }
-            min="0"
-          />
-          <Input
-            type="date"
-            placeholder="Expiry Date"
-            value={medicine.expiryDate}
-            onChange={(e) =>
-              setMedicine({ ...medicine, expiryDate: e.target.value })
-            }
-          />
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-full justify-between"
-              >
-                {medicine.facilityId
-                  ? facilities.find((f) => f.id === parseInt(medicine.facilityId))
-                      ?.name
-                  : "Select Facility"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
+      <div className="pt-20">
+        <div className="max-w-md mx-auto p-6 bg-white shadow-md rounded-md">
+          <h2 className="text-lg font-semibold mb-4">Edit Veterinary Medicine</h2>
+          {successMessage && (
+            <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription>{successMessage}</AlertDescription>
+            </Alert>
+          )}
+          {errorMessage && (
+            <Alert className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">Medicine Name</label>
+              <Input
+                id="name"
+                placeholder="Enter medicine name"
+                value={medicine.name}
+                onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="stock" className="block text-sm font-medium text-gray-700">Stock</label>
+              <Input
+                id="stock"
+                type="number"
+                placeholder="Enter stock quantity"
+                value={medicine.stock}
+                onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
+                min="0"
+              />
+            </div>
+            <div>
+              <label htmlFor="weeklyRequirement" className="block text-sm font-medium text-gray-700">Weekly Requirement</label>
+              <Input
+                id="weeklyRequirement"
+                type="number"
+                placeholder="Enter weekly requirement"
+                value={medicine.weeklyRequirement}
+                onChange={(e) => setMedicine({ ...medicine, weeklyRequirement: e.target.value })}
+                min="0"
+              />
+            </div>
+            <div>
+              <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700">Expiry Date</label>
+              <Input
+                id="expiryDate"
+                type="date"
+                placeholder="Select expiry date"
+                value={medicine.expiryDate}
+                onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="facility" className="block text-sm font-medium text-gray-700">Facility</label>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="facility"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {medicine.facilityId
+                      ? facilities.find((f) => f.id === parseInt(medicine.facilityId))?.name
+                      : "Select Facility"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search facility..." />
+                    <CommandList>
+                      <CommandEmpty>No facility found.</CommandEmpty>
+                      {facilities.map((facility) => (
+                        <CommandItem
+                          key={facility.id}
+                          value={`${facility.name} (${facility.type})`}
+                          onSelect={() => {
+                            setMedicine({
+                              ...medicine,
+                              facilityId: facility.id.toString(),
+                            });
+                            setOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              medicine.facilityId === facility.id.toString() ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {facility.name} ({facility.type})
+                        </CommandItem>
+                      ))}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex space-x-2">
+              <Button type="submit" className="flex-1">Update Medicine</Button>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>
+                Cancel
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput placeholder="Search facility..." />
-                <CommandList>
-                  <CommandEmpty>No facility found.</CommandEmpty>
-                  {facilities.map((facility) => (
-                    <CommandItem
-                      key={facility.id}
-                      value={`${facility.name} (${facility.type})`}
-                      onSelect={() => {
-                        setMedicine({
-                          ...medicine,
-                          facilityId: facility.id.toString(),
-                        });
-                        setOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          medicine.facilityId === facility.id.toString()
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {facility.name} ({facility.type})
-                    </CommandItem>
-                  ))}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <div className="flex space-x-2">
-            <Button type="submit" className="flex-1">
-              Update Medicine
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => router.push("/dashboard")}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 }
+
+const formatDate = (dateString: string): string =>
+  new Date(dateString).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });

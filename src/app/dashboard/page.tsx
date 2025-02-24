@@ -247,7 +247,7 @@ export default function VeterinaryMedicineDashboard() {
             "flex items-center p-4 border-b border-teal-700",
             isSidebarExpanded ? "justify-between" : "justify-center"
           )}>
-            {isSidebarExpanded && <h2 className="text-xl font-bold">Menu</h2>}
+            {isSidebarExpanded && <h2 className="text-xl font-bold">VetMed</h2>}
             <Button
               variant="ghost"
               size="icon"
@@ -318,7 +318,7 @@ export default function VeterinaryMedicineDashboard() {
                   <AlertDescription>{successMessage}</AlertDescription>
                 </Alert>
               )}
-
+<div className="container mx-auto p-4 pb-2"/>
               <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
                 <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
                   <Package size={14} /> Total Stock: {totalStockValue}
