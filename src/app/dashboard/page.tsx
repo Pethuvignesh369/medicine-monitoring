@@ -62,17 +62,6 @@ const AlertsSection = ({ alerts, onDismiss }: { alerts: Alert[], onDismiss: (id:
   )
 );
 
-const ExportButtons = ({ onPDFExport, onExcelExport }: { onPDFExport: () => void; onExcelExport: () => void }) => (
-  <div className="flex justify-end space-x-2 mb-4">
-    <Button className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" size="sm" onClick={onPDFExport}>
-      <FileText size={14} className="mr-0" /> Export as PDF
-    </Button>
-    <Button className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" size="sm" onClick={onExcelExport}>
-      <FileSpreadsheet size={14} className="mr-0" /> Export as Excel
-    </Button>
-  </div>
-);
-
 export default function VeterinaryMedicineDashboard() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,7 +276,6 @@ export default function VeterinaryMedicineDashboard() {
       <Navbar />
       <div className="container mx-auto p-4">
         <AlertsSection alerts={alerts} onDismiss={dismissAlert} />
-        <ExportButtons onPDFExport={exportToPDF} onExcelExport={exportToExcel} />
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -322,7 +310,10 @@ export default function VeterinaryMedicineDashboard() {
             <Card className="shadow-lg mt-4">
               <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
                 <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col md:flex-row items-center gap-2">
+                  <Link href="/dashboard/add">
+                    <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
+                  </Link>
                   <select 
                     value={facilityFilter} 
                     onChange={(e) => setFacilityFilter(e.target.value)}
@@ -334,12 +325,22 @@ export default function VeterinaryMedicineDashboard() {
                     <option value="ClinicianCenter">Clinician Centers</option>
                     <option value="Polyclinic">Polyclinics</option>
                   </select>
-                  <Link href="/dashboard/add">
-                    <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
-                  </Link>
+                  <Button 
+                    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" 
+                    size="sm" 
+                    onClick={exportToPDF}
+                  >
+                    <FileText size={14} className="mr-1" /> Export as PDF
+                  </Button>
+                  <Button 
+                    className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" 
+                    size="sm" 
+                    onClick={exportToExcel}
+                  >
+                    <FileSpreadsheet size={14} className="mr-1" /> Export as Excel
+                  </Button>
                 </div>
               </CardHeader>
-
               <CardContent>
                 {isMobile ? (
                   <div className="space-y-4">
