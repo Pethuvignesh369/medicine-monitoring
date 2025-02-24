@@ -247,7 +247,7 @@ export default function VeterinaryMedicineDashboard() {
             "flex items-center p-4 border-b border-teal-700",
             isSidebarExpanded ? "justify-between" : "justify-center"
           )}>
-            {isSidebarExpanded && <h2 className="text-xl font-bold">VetMed</h2>}
+            {isSidebarExpanded && <h2 className="text-xl font-bold">Menu</h2>}
             <Button
               variant="ghost"
               size="icon"
@@ -304,7 +304,7 @@ export default function VeterinaryMedicineDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {isMobile && <Navbar />} {/* Navbar only on mobile */}
+        {isMobile && <Navbar />}
         <div className={cn("p-4", isMobile ? "pt-20" : (isSidebarExpanded ? "pt-0 ml-64" : "pt-0 ml-16"))}>
           {loading ? (
             <div className="flex justify-center items-center h-64">
@@ -341,7 +341,7 @@ export default function VeterinaryMedicineDashboard() {
                   <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
                   <div className="flex flex-col md:flex-row items-center gap-2">
                     <Link href="/dashboard/add">
-                      <Button className="bg-green-600 hover:bg-green-700">+ Add Medicine</Button>
+                      <Button className="bg-gray-700 hover:bg-gray-800 text-white">+ Add Medicine</Button>
                     </Link>
                     <select 
                       value={facilityFilter} 
@@ -355,14 +355,14 @@ export default function VeterinaryMedicineDashboard() {
                       <option value="Polyclinic">Polyclinics</option>
                     </select>
                     <Button 
-                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" 
+                      className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 text-xs" 
                       size="sm" 
                       onClick={exportToPDF}
                     >
                       <FileText size={14} className="mr-1" /> Export as PDF
                     </Button>
                     <Button 
-                      className="bg-green-500 hover:bg-green-600 px-3 py-1 text-xs" 
+                      className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 text-xs" 
                       size="sm" 
                       onClick={exportToExcel}
                     >
