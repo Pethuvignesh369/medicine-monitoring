@@ -242,7 +242,7 @@ export default function VeterinaryMedicineDashboard() {
         )}
       >
         <div className="flex items-center justify-between p-4 border-b border-teal-700">
-          <h2 className="text-xl font-bold">Dashboard Menu</h2>
+          <h2 className="text-xl font-bold">VetMed Monitor</h2>
           {isMobile && (
             <Button
               variant="ghost"
