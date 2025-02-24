@@ -327,6 +327,9 @@ export default function VeterinaryMedicineDashboard() {
                           >
                             Delete
                           </Button>
+                          <Link href={`/dashboard/usage/${med.id}`}>
+                            <Button size="sm" variant="outline">View Usage</Button>
+                          </Link>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
                           <Input
@@ -411,6 +414,9 @@ export default function VeterinaryMedicineDashboard() {
                               >
                                 Delete
                               </Button>
+                              <Link href={`/dashboard/usage/${med.id}`}>
+                                <Button size="sm" variant="outline">View Usage</Button>
+                              </Link>
                             </TableCell>
                           </TableRow>
                         ))}
