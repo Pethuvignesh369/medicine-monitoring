@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
 import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, Menu, X } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
@@ -133,7 +134,7 @@ export default function VeterinaryMedicineDashboard() {
 
     const totalStock = filteredMeds.reduce((sum, med) => sum + med.stock, 0);
     const currentDate = new Date();
-    const expired = filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date());
+    const expired = filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
     const nonExpired = filteredMeds.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate);
 
     const data = [
@@ -242,7 +243,7 @@ export default function VeterinaryMedicineDashboard() {
         )}
       >
         <div className="flex items-center justify-between p-4 border-b border-teal-700">
-          <h2 className="text-xl font-bold">VetMed Monitor</h2>
+          <h2 className="text-xl font-bold">Dashboard Menu</h2>
           {isMobile && (
             <Button
               variant="ghost"
@@ -453,77 +454,107 @@ export default function VeterinaryMedicineDashboard() {
                       ))}
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <Table className="w-full">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead>Weekly Requirement</TableHead>
-                            <TableHead>Expiry Date</TableHead>
-                            <TableHead>Facility</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Today’s Usage</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {currentMedicines.map((med) => (
-                            <TableRow key={med.id}>
-                              <TableCell>{med.name}</TableCell>
-                              <TableCell>{med.stock}</TableCell>
-                              <TableCell>{med.weeklyRequirement}</TableCell>
-                              <TableCell className={getExpiryColor(med.expiryDate)}>
-                                {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                              </TableCell>
-                              <TableCell>{med.facility.name}</TableCell>
-                              <TableCell>
-                                <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                                  {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    placeholder="Usage"
-                                    value={usageInputs[med.id] || ""}
-                                    onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                                    className="w-20"
-                                    min="0"
-                                  />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleUsageSubmit(med.id)}
-                                    disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
-                                  >
-                                    Log
-                                  </Button>
-                                </div>
-                              </TableCell>
-                              <TableCell className="space-x-2">
-                                <Link href={`/dashboard/edit/${med.id}`}>
-                                  <Button size="sm" variant="outline">Edit</Button>
-                                </Link>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive" 
-                                  onClick={() => {
-                                    setIsModalOpen(true);
-                                    setDeleteId(med.id);
-                                  }}
-                                >
-                                  Delete
-                                </Button>
-                                <Link href={`/dashboard/usage/${med.id}`}>
-                                  <Button size="sm" variant="outline">View Usage</Button>
-                                </Link>
-                              </TableCell>
+                    <TooltipProvider>
+                      <div className="overflow-x-auto">
+                        <Table className="w-full">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Stock</TableHead>
+                              <TableHead>Weekly Requirement</TableHead>
+                              <TableHead>Expiry Date</TableHead>
+                              <TableHead>Facility</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Today’s Usage</TableHead>
+                              <TableHead>Actions</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          </TableHeader>
+                          <TableBody>
+                            {currentMedicines.map((med) => (
+                              <TableRow key={med.id}>
+                                <TableCell>{med.name}</TableCell>
+                                <TableCell>{med.stock}</TableCell>
+                                <TableCell>{med.weeklyRequirement}</TableCell>
+                                <TableCell className={getExpiryColor(med.expiryDate)}>
+                                  {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                                </TableCell>
+                                <TableCell>{med.facility.name}</TableCell>
+                                <TableCell>
+                                  <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
+                                    {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      placeholder="Usage"
+                                      value={usageInputs[med.id] || ""}
+                                      onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                                      className="w-20"
+                                      min="0"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleUsageSubmit(med.id)}
+                                      disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                                    >
+                                      Log
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Link href={`/dashboard/edit/${med.id}`}>
+                                          <Button size="icon" variant="ghost" className="hover:bg-gray-200">
+                                            <Edit2 className="w-4 h-4 text-blue-600" />
+                                          </Button>
+                                        </Link>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Edit</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          size="icon" 
+                                          variant="ghost" 
+                                          className="hover:bg-gray-200"
+                                          onClick={() => {
+                                            setIsModalOpen(true);
+                                            setDeleteId(med.id);
+                                          }}
+                                        >
+                                          <Trash2 className="w-4 h-4 text-red-600" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Delete</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Link href={`/dashboard/usage/${med.id}`}>
+                                          <Button size="icon" variant="ghost" className="hover:bg-gray-200">
+                                            <BarChart2 className="w-4 h-4 text-teal-600" />
+                                          </Button>
+                                        </Link>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>View Usage</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TooltipProvider>
                   )}
                   <div className="container mx-auto p-4 pb-2"/>
                   <Pagination 
