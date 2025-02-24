@@ -42,13 +42,15 @@ type LegendPayload = {
 
 // Facility-based color mapping
 const facilityColors: { [key: string]: string } = {
-  Dispensary: "#34D399", // Green
-  Hospital: "#4F46E5",    // Blue
-  "Clinician Center": "#FBBF24", // Yellow
-  Polyclinic: "#A855F7",  // Purple
-  Expired: "#FF0000",     // Red
-  "Expiring Soon": "#F472B6", // Pink
+  Dispensary: "#A5D6A7",     // Lighter Green
+  Hospital: "#9FA8DA",       // Lighter Indigo
+  "Clinician Center": "#FFE082", // Lighter Amber
+  Polyclinic: "#CE93D8",     // Lighter Purple
+  Expired: "#EF9A9A",        // Lighter Red
+  "Expiring Soon": "#F48FB1", // Lighter Pink
 };
+
+
 
 // Check if medicine is expiring soon (within 7 days)
 const isExpiringSoon = (expiryDate: string | null) => {
