@@ -30,11 +30,11 @@ export default function Navbar() {
         <div
           className={`${
             isOpen ? "flex" : "hidden"
-          } md:flex flex-col md:flex-row items-center gap-6 md:gap-8 absolute md:static top-16 left-0 w-full md:w-auto bg-gradient-to-r from-blue-900 via-teal-800 to-blue-900 md:bg-transparent p-4 md:p-0 transition-all duration-300 ease-in-out`}
+          } md:flex flex-col md:flex-row items-center gap-4 md:gap-6 absolute md:static top-16 left-0 w-full md:w-auto bg-blue-900 md:bg-transparent p-4 md:p-0 transition-all duration-300 ease-in-out`}
         >
           <Link
             href="/"
-            className="flex items-center gap-2 px-3 py-1 hover:text-teal-300 hover:scale-105 transition-all duration-200 rounded-full"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 transition-all duration-200"
             onClick={() => setIsOpen(false)}
           >
             <span className="text-lg">🏠</span>
@@ -42,7 +42,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 px-3 py-1 hover:text-teal-300 hover:scale-105 transition-all duration-200 rounded-full"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 transition-all duration-200"
             onClick={() => setIsOpen(false)}
           >
             <span className="text-lg">📊</span>
@@ -50,7 +50,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/dashboard/add"
-            className="flex items-center gap-2 px-3 py-1 hover:text-teal-300 hover:scale-105 transition-all duration-200 rounded-full"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 transition-all duration-200"
             onClick={() => setIsOpen(false)}
           >
             <span className="text-lg">➕</span>
@@ -58,7 +58,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/admin/facilities"
-            className="flex items-center gap-2 px-3 py-1 hover:text-teal-300 hover:scale-105 transition-all duration-200 rounded-full"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 transition-all duration-200"
             onClick={() => setIsOpen(false)}
           >
             <span className="text-lg">🏢</span>
