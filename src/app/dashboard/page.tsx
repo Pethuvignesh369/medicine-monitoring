@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
-import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, Menu, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
 import jsPDF from "jspdf";
@@ -51,6 +51,7 @@ export default function VeterinaryMedicineDashboard() {
   const [facilityFilter, setFacilityFilter] = useState<string>("All");
   const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false); // New state for expansion
 
   const router = useRouter();
 
@@ -238,13 +239,16 @@ export default function VeterinaryMedicineDashboard() {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-blue-900 to-teal-800 text-white shadow-lg z-20 transition-transform duration-300 ease-in-out",
-          isMobile ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
+          "fixed top-0 left-0 h-full bg-gradient-to-b from-blue-900 to-teal-800 text-white shadow-lg z-20 transition-all duration-300 ease-in-out",
+          isMobile ? (isSidebarOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full") : (isSidebarExpanded ? "w-64" : "w-16")
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-teal-700">
-          <h2 className="text-xl font-bold">Dashboard Menu</h2>
-          {isMobile && (
+        <div className={cn(
+          "flex items-center p-4 border-b border-teal-700",
+          isSidebarExpanded || isMobile ? "justify-between" : "justify-center"
+        )}>
+          {(isSidebarExpanded || isMobile) && <h2 className="text-xl font-bold">VetMed</h2>}
+          {isMobile ? (
             <Button
               variant="ghost"
               size="icon"
@@ -253,40 +257,61 @@ export default function VeterinaryMedicineDashboard() {
             >
               <X className="w-6 h-6" />
             </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+              className="text-white hover:text-teal-300"
+            >
+              {isSidebarExpanded ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+            </Button>
           )}
         </div>
         <nav className="p-4 space-y-2">
           <Link
             href="/"
-            className="flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200"
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
+              !isSidebarExpanded && !isMobile && "justify-center"
+            )}
             onClick={() => setIsSidebarOpen(false)}
           >
             <Home className="w-5 h-5" />
-            <span>Home</span>
+            {(isSidebarExpanded || isMobile) && <span>Home</span>}
           </Link>
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 p-2 rounded-md bg-white/20 hover:bg-white/30 transition-all duration-200"
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-md bg-white/20 hover:bg-white/30 transition-all duration-200",
+              !isSidebarExpanded && !isMobile && "justify-center"
+            )}
             onClick={() => setIsSidebarOpen(false)}
           >
             <BarChart2 className="w-5 h-5" />
-            <span>Dashboard</span>
+            {(isSidebarExpanded || isMobile) && <span>Dashboard</span>}
           </Link>
           <Link
             href="/dashboard/add"
-            className="flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200"
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
+              !isSidebarExpanded && !isMobile && "justify-center"
+            )}
             onClick={() => setIsSidebarOpen(false)}
           >
             <PlusCircle className="w-5 h-5" />
-            <span>Add Medicine</span>
+            {(isSidebarExpanded || isMobile) && <span>Add Medicine</span>}
           </Link>
           <Link
             href="/admin/facilities"
-            className="flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200"
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
+              !isSidebarExpanded && !isMobile && "justify-center"
+            )}
             onClick={() => setIsSidebarOpen(false)}
           >
             <Building2 className="w-5 h-5" />
-            <span>Add Facility</span>
+            {(isSidebarExpanded || isMobile) && <span>Add Facility</span>}
           </Link>
         </nav>
       </div>
@@ -294,7 +319,7 @@ export default function VeterinaryMedicineDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {isMobile && <Navbar />}
-        <div className={cn("p-4", isMobile ? "pt-20" : "pt-0 ml-64")}>
+        <div className={cn("p-4", isMobile ? "pt-20" : (isSidebarExpanded ? "pt-0 ml-64" : "pt-0 ml-16"))}>
           {/* Hamburger Toggle for Mobile */}
           {isMobile && (
             <Button
