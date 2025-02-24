@@ -29,6 +29,8 @@ export default function AddMedicine() {
         setFacilities(data);
       } catch (error) {
         console.error("Error fetching facilities:", error);
+        setErrorMessage("Failed to load facilities.");
+        setTimeout(() => setErrorMessage(null), 3000);
       }
     };
     fetchFacilities();
@@ -36,6 +38,12 @@ export default function AddMedicine() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!medicine.name || !medicine.stock || !medicine.weeklyRequirement || !medicine.facilityId) {
+      setErrorMessage("Please fill all required fields.");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
+    }
 
     const res = await fetch("/api/medicines", {
       method: "POST",
