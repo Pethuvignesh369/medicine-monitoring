@@ -2,28 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
-
-type Facility = {
-  id: number;
-  name: string;
-  type: string;
-};
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
 
 export default function AddMedicine() {
-  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [medicine, setMedicine] = useState({
     name: "",
     stock: "",
@@ -32,152 +16,125 @@ export default function AddMedicine() {
     facilityId: "",
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [facilities, setFacilities] = useState<{ id: number; name: string }[]>([]);
   const router = useRouter();
 
-  // Fetch facilities from API
   useEffect(() => {
-    async function fetchFacilities() {
-      const res = await fetch("/api/facilities");
-      const data: Facility[] = await res.json();
-      setFacilities(data);
-    }
+    const fetchFacilities = async () => {
+      try {
+        const res = await fetch("/api/facilities");
+        if (!res.ok) throw new Error("Failed to fetch facilities");
+        const data = await res.json();
+        setFacilities(data);
+      } catch (error) {
+        console.error("Error fetching facilities:", error);
+      }
+    };
     fetchFacilities();
   }, []);
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const res = await fetch("/api/medicines", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(medicine),
+      body: JSON.stringify({
+        name: medicine.name,
+        stock: parseInt(medicine.stock),
+        weeklyRequirement: parseInt(medicine.weeklyRequirement),
+        expiryDate: medicine.expiryDate || null,
+        facilityId: parseInt(medicine.facilityId),
+      }),
     });
 
-    if (res.ok) {
-      setSuccessMessage("Medicine added successfully!");
-
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => router.push("/dashboard"), 2000);
-    } else {
-      alert("Failed to add medicine. Please try again.");
+    if (!res.ok) {
+      setErrorMessage("Failed to add medicine.");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
     }
+
+    setSuccessMessage("Medicine added successfully!");
+    setTimeout(() => {
+      setSuccessMessage(null);
+      router.push("/dashboard");
+    }, 2000);
+    setMedicine({ name: "", stock: "", weeklyRequirement: "", expiryDate: "", facilityId: "" });
   };
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      {/* Success Alert */}
+    <div className="max-w-md mx-auto p-6 bg-white shadow-md rounded-md">
+      <h2 className="text-lg font-semibold mb-4">Add Veterinary Medicine</h2>
       {successMessage && (
         <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
-
-      <Card className="p-6 border rounded-lg shadow-md">
-        <h2 className="text-xl font-bold mb-4">Add Medicine</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Medicine Name */}
-          <div>
-            <Label htmlFor="name">Medicine Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Enter medicine name"
-              value={medicine.name}
-              onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
-              required
-            />
-          </div>
-
-          {/* Stock */}
-          <div>
-            <Label htmlFor="stock">Stock</Label>
-            <Input
-              id="stock"
-              type="number"
-              placeholder="Enter stock quantity"
-              value={medicine.stock}
-              onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
-              required
-            />
-          </div>
-
-          {/* Weekly Requirement */}
-          <div>
-            <Label htmlFor="weeklyRequirement">Weekly Requirement</Label>
-            <Input
-              id="weeklyRequirement"
-              type="number"
-              placeholder="Enter weekly requirement"
-              value={medicine.weeklyRequirement}
-              onChange={(e) =>
-                setMedicine({ ...medicine, weeklyRequirement: e.target.value })
-              }
-              required
-            />
-          </div>
-
-          {/* Expiry Date */}
-          <div>
-            <Label htmlFor="expiryDate">Expiry Date</Label>
-            <Input
-              id="expiryDate"
-              type="date"
-              value={medicine.expiryDate}
-              onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
-              required
-            />
-          </div>
-
-          {/* Facility Dropdown */}
-          <div>
-            <Label>Facility</Label>
-            <Select
-              onValueChange={(value: string) =>
-                setMedicine({ ...medicine, facilityId: value })
-              }
-              value={medicine.facilityId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a facility" />
-              </SelectTrigger>
-              <SelectContent>
-                {facilities.map((facility) => (
-                  <SelectItem key={facility.id} value={facility.id.toString()}>
-                    {facility.name} ({facility.type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-between">
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
-              Add Medicine
-            </Button>
-            <Button variant="outline" onClick={() => router.push("/dashboard")}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Card>
-      {/* Sleek Black Footer */}
-<footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
-  <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    🏠 <span>Home</span>
-  </Link>
-  <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    📊 <span>Dashboard</span>
-  </Link>
-  <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    ➕ <span>Add Medicine</span>
-  </Link>
-  <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
-    🏢 <span>Add Facility</span>
-  </Link>
-</footer>
+      {errorMessage && (
+        <Alert className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          placeholder="Medicine Name"
+          value={medicine.name}
+          onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
+        />
+        <Input
+          type="number"
+          placeholder="Stock"
+          value={medicine.stock}
+          onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
+          min="0"
+        />
+        <Input
+          type="number"
+          placeholder="Weekly Requirement"
+          value={medicine.weeklyRequirement}
+          onChange={(e) => setMedicine({ ...medicine, weeklyRequirement: e.target.value })}
+          min="0"
+        />
+        <Input
+          type="date"
+          placeholder="Expiry Date"
+          value={medicine.expiryDate}
+          onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
+        />
+        <select
+          value={medicine.facilityId}
+          onChange={(e) => setMedicine({ ...medicine, facilityId: e.target.value })}
+          className="w-full p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="" disabled>Select Facility</option>
+          {facilities.map((facility) => (
+            <option key={facility.id} value={facility.id}>{facility.name}</option>
+          ))}
+        </select>
+        <div className="flex space-x-2">
+          <Button type="submit" className="flex-1">Add Medicine</Button>
+          <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+      <footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
+        <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          🏠 <span>Home</span>
+        </Link>
+        <Link href="/dashboard" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          📊 <span>Dashboard</span>
+        </Link>
+        <Link href="/dashboard/add" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          ➕ <span>Add Medicine</span>
+        </Link>
+        <Link href="/admin/facilities" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
+          🏢 <span>Add Facility</span>
+        </Link>
+      </footer>
     </div>
   );
 }

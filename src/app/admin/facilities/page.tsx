@@ -27,43 +27,33 @@ export default function AddFacility() {
     if (!res.ok) {
       console.error("Error:", await res.json());
       setErrorMessage("Failed to add facility.");
-      setTimeout(() => setErrorMessage(null), 3000); // Clear error after 3s
+      setTimeout(() => setErrorMessage(null), 3000);
       return;
     }
 
     setSuccessMessage("Facility added successfully!");
     setTimeout(() => {
       setSuccessMessage(null);
-      router.push("/dashboard"); // Redirect to dashboard after success
-    }, 2000); // Show success message for 2s before redirect
-    setFacility({ name: "", type: "" }); // Reset form
-  };
-
-  const handleCancel = () => {
-    setFacility({ name: "", type: "" }); // Reset form
-    router.push("/dashboard"); // Redirect to dashboard
+      router.push("/dashboard");
+    }, 2000);
+    setFacility({ name: "", type: "" });
   };
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white shadow-md rounded-md">
       <h2 className="text-lg font-semibold mb-4">Add Veterinary Facility</h2>
-
-      {/* Success Alert */}
       {successMessage && (
         <Alert className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700">
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
-
-      {/* Error Alert */}
       {errorMessage && (
         <Alert className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           placeholder="Facility Name (e.g., Chennai Veterinary Dispensary)"
@@ -85,19 +75,17 @@ export default function AddFacility() {
             </option>
             <option value="Dispensary">Dispensary</option>
             <option value="Hospital">Hospital</option>
-            <option value="Clinician Center">Clinician Center</option>
+            <option value="ClinicianCenter">Clinician Center</option>
             <option value="Polyclinic">Polyclinic</option>
           </select>
         </div>
         <div className="flex space-x-2">
           <Button type="submit" className="flex-1">Add Facility</Button>
-          <Button type="button" variant="outline" className="flex-1" onClick={handleCancel}>
+          <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/dashboard")}>
             Cancel
           </Button>
         </div>
       </form>
-
-      {/* Sleek Black Footer */}
       <footer className="fixed bottom-0 left-0 w-full bg-black text-white shadow-md py-2 flex justify-around border-t border-gray-700">
         <Link href="/" className="flex flex-col items-center text-xs font-semibold hover:text-gray-400 transition">
           🏠 <span>Home</span>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import { Pagination } from "@/components/ui/pagination";
@@ -16,34 +17,31 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
-// Constants
 const ITEMS_PER_PAGE = 5;
 const MOBILE_BREAKPOINT = 768;
 const ALERT_TIMEOUT = 3000;
 const EXPIRY_WARNING_DAYS = 7;
 
-// Type Definitions tailored for Veterinary HealthTech
 interface Facility {
   id: number;
-  name: string; // e.g., "Chennai Veterinary Dispensary", "Madurai Animal Hospital"
-  type: string; // "Dispensary", "Hospital", "Clinician Center", "Polyclinic"
+  name: string;
+  type: string;
 }
 
 interface Medicine {
   id: number;
-  name: string; // e.g., "Oxytetracycline", "Rabies Vaccine"
-  stock: number; // Current stock in units
-  weeklyRequirement: number; // Weekly need based on animal treatment data
-  expiryDate: string | null; // Expiry date in ISO format (e.g., "2025-03-01")
-  facility: Facility; // Facility object from API
+  name: string;
+  stock: number;
+  weeklyRequirement: number;
+  expiryDate: string | null;
+  facility: Facility;
 }
 
 interface Alert {
   id: number;
-  message: string; // Alerts for low stock or expiry
+  message: string;
 }
 
-// Components
 const AlertsSection = ({ alerts, onDismiss }: { alerts: Alert[], onDismiss: (id: number) => void }) => (
   alerts.length > 0 && (
     <div className="mb-4">
@@ -63,10 +61,7 @@ const AlertsSection = ({ alerts, onDismiss }: { alerts: Alert[], onDismiss: (id:
   )
 );
 
-const ExportButtons = ({ onPDFExport, onExcelExport }: {
-  onPDFExport: () => void;
-  onExcelExport: () => void;
-}) => (
+const ExportButtons = ({ onPDFExport, onExcelExport }: { onPDFExport: () => void; onExcelExport: () => void }) => (
   <div className="flex justify-end space-x-2 mb-4">
     <Button className="bg-blue-500 hover:bg-blue-600 px-3 py-1 text-xs" size="sm" onClick={onPDFExport}>
       <FileText size={14} className="mr-0" /> Export as PDF
@@ -87,14 +82,17 @@ export default function VeterinaryMedicineDashboard() {
   const [isMobile, setIsMobile] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [facilityFilter, setFacilityFilter] = useState<string>("All");
+  const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
+
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
-    
+
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/medicines"); // Fetch medicines with facility data from your backend
+        const res = await fetch("/api/medicines");
         if (!res.ok) throw new Error('Failed to fetch veterinary medicine data');
         const data = await res.json();
         if (mounted) {
@@ -109,7 +107,7 @@ export default function VeterinaryMedicineDashboard() {
     };
 
     fetchData();
-    
+
     const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -134,9 +132,9 @@ export default function VeterinaryMedicineDashboard() {
   const exportToPDF = useCallback(() => {
     const doc = new jsPDF();
     const currentDate = new Date();
-    
+
     const filteredMeds = facilityFilter === "All" ? medicines : medicines.filter(med => med.facility.type === facilityFilter);
-    
+
     const tableData = {
       totalStock: filteredMeds.reduce((sum, med) => sum + med.stock, 0),
       nonExpired: filteredMeds.filter(med => !med.expiryDate || new Date(med.expiryDate) >= currentDate),
@@ -177,7 +175,7 @@ export default function VeterinaryMedicineDashboard() {
 
   const exportToExcel = useCallback(() => {
     const filteredMeds = facilityFilter === "All" ? medicines : medicines.filter(med => med.facility.type === facilityFilter);
-    
+
     const totalStock = filteredMeds.reduce((sum, med) => sum + med.stock, 0);
     const currentDate = new Date();
     const expired = filteredMeds.filter(med => med.expiryDate && new Date(med.expiryDate) < currentDate);
@@ -234,7 +232,38 @@ export default function VeterinaryMedicineDashboard() {
     }
   }, [deleteId]);
 
-  // Memoized calculations with filter applied
+  const handleUsageSubmit = async (medicineId: number) => {
+    const quantity = parseInt(usageInputs[medicineId] || "0", 10);
+    if (isNaN(quantity) || quantity <= 0) {
+      alert("Please enter a valid positive quantity");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/medicine-usage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ medicineId, quantity }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to log usage");
+      }
+
+      const updatedMedicines = await fetch("/api/medicines").then(r => r.json());
+      setMedicines(updatedMedicines);
+      setSuccessMessage(`Usage of ${quantity} units logged successfully!`);
+      setTimeout(() => setSuccessMessage(null), ALERT_TIMEOUT);
+      setUsageInputs(prev => ({ ...prev, [medicineId]: "" }));
+    } catch (error) {
+      alert(error.message || "Failed to log usage");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredMedicines = useMemo(() => {
     if (facilityFilter === "All") return medicines;
     return medicines.filter(med => med.facility.type === facilityFilter);
@@ -295,7 +324,7 @@ export default function VeterinaryMedicineDashboard() {
                   <option value="All">All Facilities</option>
                   <option value="Dispensary">Dispensaries</option>
                   <option value="Hospital">Hospitals</option>
-                  <option value="Clinician Center">Clinician Centers</option>
+                  <option value="ClinicianCenter">Clinician Centers</option>
                   <option value="Polyclinic">Polyclinics</option>
                 </select>
                 <Link href="/dashboard/add">
@@ -334,6 +363,23 @@ export default function VeterinaryMedicineDashboard() {
                           Delete
                         </Button>
                       </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Today’s Usage"
+                          value={usageInputs[med.id] || ""}
+                          onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                          className="w-24"
+                          min="0"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleUsageSubmit(med.id)}
+                          disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                        >
+                          Log Usage
+                        </Button>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -348,6 +394,7 @@ export default function VeterinaryMedicineDashboard() {
                         <TableHead>Expiry Date</TableHead>
                         <TableHead>Facility</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Today’s Usage</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -365,6 +412,25 @@ export default function VeterinaryMedicineDashboard() {
                             <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
                               {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="Usage"
+                                value={usageInputs[med.id] || ""}
+                                onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                                className="w-20"
+                                min="0"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleUsageSubmit(med.id)}
+                                disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                              >
+                                Log
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell className="space-x-2">
                             <Link href={`/dashboard/edit/${med.id}`}>
@@ -446,7 +512,6 @@ export default function VeterinaryMedicineDashboard() {
   );
 }
 
-// Helper Functions
 const formatDate = (dateString: string): string =>
   new Date(dateString).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
 
