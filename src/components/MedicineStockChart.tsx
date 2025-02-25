@@ -39,14 +39,14 @@ type LegendPayload = {
   color: string;
 };
 
-// Updated facility color mapping with lighter, softer colors
+// Enhanced professional color palette matching the previous component
 const facilityColors: { [key: string]: string } = {
-  Dispensary: "#81C784",     // Light Green
-  Hospital: "#64B5F6",       // Light Blue
-  "Clinician Center": "#FFD54F", // Light Yellow
-  Polyclinic: "#CE93D8",     // Light Purple
-  Expired: "#FFAB91",        // Light Coral
-  "Expiring Soon": "#F8BBD0", // Very Light Pink
+  Dispensary: "#4CAF50",      // Green
+  Hospital: "#2196F3",        // Blue
+  "Clinician Center": "#FF9800", // Orange
+  Polyclinic: "#9C27B0",      // Purple
+  "Expiring Soon": "#FFC107", // Amber/Yellow
+  Expired: "#F44336",         // Red
 };
 
 // Check if medicine is expiring soon (within 7 days)
@@ -63,31 +63,34 @@ export default function MedicineStockChart({ medicines }: MedicineStockChartProp
     const isExpired = med.expiryDate ? new Date(med.expiryDate) < new Date() : false;
     const expiringSoon = isExpiringSoon(med.expiryDate);
     return {
-      name: med.name.length > 10 ? med.name.slice(0, 10) + "..." : med.name,
+      name: med.name.length > 12 ? med.name.slice(0, 12) + "..." : med.name,
       stock: med.stock,
       weeklyRequirement: med.weeklyRequirement,
       fullName: med.name,
       expiryDate: med.expiryDate,
       facility: med.facility.name,
+      facilityType: med.facility.type,
       color: isExpired
         ? facilityColors["Expired"]
         : expiringSoon
         ? facilityColors["Expiring Soon"]
-        : facilityColors[med.facility.type] || "#F06292", // Default light pink if type not found
+        : facilityColors[med.facility.type] || "#607D8B", // Default slate blue if type not found
     };
   });
 
-  // Custom Tooltip
+  // Custom Tooltip with improved styling
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-gray-800 text-white p-2 rounded shadow-lg text-xs">
-          <p><strong>{data.fullName}</strong></p>
-          <p>Stock: {data.stock}</p>
-          <p>Weekly Requirement: {data.weeklyRequirement}</p>
-          <p>Expiry: {data.expiryDate ? formatDate(data.expiryDate) : "N/A"}</p>
-          <p>Facility: {data.facility}</p>
+        <div className="bg-gray-800 text-white p-3 rounded-md shadow-lg text-sm border border-gray-700">
+          <p className="font-semibold mb-1">{data.fullName}</p>
+          <div className="space-y-1 mt-2">
+            <p>Stock: <span className="font-medium">{data.stock}</span></p>
+            <p>Weekly Req: <span className="font-medium">{data.weeklyRequirement}</span></p>
+            <p>Expiry: <span className="font-medium">{data.expiryDate ? formatDate(data.expiryDate) : "N/A"}</span></p>
+            <p>Facility: <span className="font-medium">{data.facility}</span> ({data.facilityType})</p>
+          </div>
         </div>
       );
     }
@@ -104,15 +107,22 @@ export default function MedicineStockChart({ medicines }: MedicineStockChartProp
     { value: "Expired", type: "square", id: "Expired", color: facilityColors["Expired"] },
   ];
 
+  // Calculate average weekly requirement for reference line
+  const avgWeeklyReq = chartData.length > 0 
+    ? chartData.reduce((sum, d) => sum + d.weeklyRequirement, 0) / chartData.length 
+    : 0;
+
   return (
-    <div className="w-full p-3 bg-white shadow-md rounded-lg border min-h-[300px]">
-      <h2 className="text-md font-semibold mb-2 text-gray-700 text-center">📊 Medicine Stock Overview</h2>
+    <div className="w-full p-4 bg-white shadow-md rounded-lg border border-gray-200 min-h-[320px] h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">📊 Medicine Stock Overview</h2>
+      </div>
       <ResponsiveContainer width="100%" height={250}>
-        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 0, bottom: 40 }}>
-          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.8} stroke="#B0BEC5" />
+        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 0, bottom: 50 }}>
+          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.6} stroke="#E0E0E0" />
           <XAxis 
             dataKey="name" 
-            tick={{ fontSize: 9 }} 
+            tick={{ fontSize: 10 }} 
             angle={-35} 
             textAnchor="end" 
             dy={10} 
@@ -125,19 +135,28 @@ export default function MedicineStockChart({ medicines }: MedicineStockChartProp
           <Tooltip content={<CustomTooltip />} />
           <Legend 
             payload={legendPayload}
-            wrapperStyle={{ fontSize: "10px", bottom: 0 }}
+            wrapperStyle={{ fontSize: "11px", bottom: -10 }}
             verticalAlign="bottom"
+            iconSize={12}
+            iconType="circle"
           />
-          <Bar dataKey="stock" name="Stock" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="stock" name="Stock" radius={[6, 6, 0, 0]}>
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Bar>
           <ReferenceLine 
-            y={chartData.reduce((sum, d) => sum + d.weeklyRequirement, 0) / chartData.length} 
-            stroke="#888" 
+            y={avgWeeklyReq} 
+            stroke="#555555" 
             strokeDasharray="5 5" 
-            label={{ value: "Avg Weekly Req", position: "top", fontSize: 10 }}
+            strokeWidth={1.5}
+            label={{ 
+              value: "Avg Weekly Requirement", 
+              position: "top", 
+              fill: "#333333",
+              fontSize: 11,
+              fontWeight: 500
+            }}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -147,4 +166,8 @@ export default function MedicineStockChart({ medicines }: MedicineStockChartProp
 
 // Helper function to format date
 const formatDate = (dateString: string): string =>
-  new Date(dateString).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  new Date(dateString).toLocaleDateString("en-GB", { 
+    day: "2-digit", 
+    month: "2-digit", 
+    year: "numeric" 
+  });

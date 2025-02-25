@@ -3,16 +3,17 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Package, AlertTriangle, CalendarX, XCircle, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
+import StockMetricsChart from "@/components/StockMetricsChart";
 import { Pagination } from "@/components/ui/pagination";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -231,8 +232,6 @@ export default function VeterinaryMedicineDashboard() {
     return filteredMedicines.slice(indexOfFirstItem, indexOfLastItem);
   }, [filteredMedicines, currentPage]);
 
-  const totalStockValue = useMemo(() => totalStock(filteredMedicines), [filteredMedicines]);
-
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar (Desktop Only) */}
@@ -247,7 +246,7 @@ export default function VeterinaryMedicineDashboard() {
             "flex items-center p-4 border-b border-teal-700",
             isSidebarExpanded ? "justify-between" : "justify-center"
           )}>
-            {isSidebarExpanded && <h2 className="text-xl font-bold">VetMed</h2>}
+            {isSidebarExpanded && <h2 className="text-xl font-bold">Menu</h2>}
             <Button
               variant="ghost"
               size="icon"
@@ -318,23 +317,20 @@ export default function VeterinaryMedicineDashboard() {
                   <AlertDescription>{successMessage}</AlertDescription>
                 </Alert>
               )}
-<div className="container mx-auto p-4 pb-2"/>
-              <div className="flex flex-wrap justify-center md:justify-end gap-2 mb-4">
-                <Badge className="px-3 py-1 text-xs bg-blue-600 text-white flex items-center gap-1">
-                  <Package size={14} /> Total Stock: {totalStockValue}
-                </Badge>
-                <Badge className="px-3 py-1 text-xs bg-yellow-600 text-white flex items-center gap-1">
-                  <AlertTriangle size={14} /> Low Stock: {lowStockCount(filteredMedicines)}
-                </Badge>
-                <Badge className="px-3 py-1 text-xs bg-orange-500 text-white flex items-center gap-1">
-                  <CalendarX size={14} /> Expiring Soon: {expiringSoonCount(filteredMedicines)}
-                </Badge>
-                <Badge className="px-3 py-1 text-xs bg-red-600 text-white flex items-center gap-1">
-                  <CalendarX size={14} /> Expired: {expiredCount(filteredMedicines)}
-                </Badge>
-              </div>
 
-              {filteredMedicines.length > 0 && <MedicineStockChart medicines={filteredMedicines} />}
+              {/* Charts in Same Row with Spacing */}
+              {filteredMedicines.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex flex-col md:flex-row gap-4 mb-4">
+                    <div className="flex-1">
+                      <MedicineStockChart medicines={filteredMedicines} />
+                    </div>
+                    <div className="flex-1">
+                      <StockMetricsChart medicines={filteredMedicines} />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <Card className="shadow-lg mt-4">
                 <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
@@ -612,24 +608,6 @@ const getBadgeColor = (stock: number, weeklyRequirement: number, expiryDate: str
 
 const getExpiryColor = (expiryDate: string | null): string =>
   !expiryDate ? "text-gray-500" : new Date(expiryDate) < new Date() ? "text-red-600 font-bold" : "text-green-600";
-
-const totalStock = (medicines: Medicine[]): number =>
-  medicines.reduce((total, med) => total + med.stock, 0);
-
-const lowStockCount = (medicines: Medicine[]): number =>
-  medicines.filter(med => med.stock < med.weeklyRequirement).length;
-
-const expiringSoonCount = (medicines: Medicine[]): number => {
-  const today = new Date();
-  return medicines.filter(med => 
-    med.expiryDate && 
-    new Date(med.expiryDate) > today && 
-    new Date(med.expiryDate) <= new Date(today.setDate(today.getDate() + EXPIRY_WARNING_DAYS))
-  ).length;
-};
-
-const expiredCount = (medicines: Medicine[]): number =>
-  medicines.filter(med => med.expiryDate && new Date(med.expiryDate) < new Date()).length;
 
 const getTimestamp = (): string =>
   new Date().toISOString().replace(/[:.-]/g, "_");
