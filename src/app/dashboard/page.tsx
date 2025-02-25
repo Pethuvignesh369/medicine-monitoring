@@ -11,7 +11,8 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Loader2, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight, CheckCircle, Plus, Pill, AlertTriangle, Clock, ChevronDown, Package, Calendar, Check, BarChart } from "lucide-react"; // Removed Search
 import MedicineStockChart from "@/components/MedicineStockChart";
 import StockMetricsChart from "@/components/StockMetricsChart";
 import { Pagination } from "@/components/ui/pagination";
@@ -52,6 +53,7 @@ export default function VeterinaryMedicineDashboard() {
   const [facilityFilter, setFacilityFilter] = useState<string>("All");
   const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const router = useRouter();
 
@@ -221,10 +223,32 @@ export default function VeterinaryMedicineDashboard() {
     }
   };
 
-  const filteredMedicines = useMemo(() => {
+  const isExpiringSoon = (expiryDate: string | null) => {
+    if (!expiryDate) return false;
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const diffDays = (expiry.getTime() - today.getTime()) / (1000 * 3600 * 24);
+    return diffDays > 0 && diffDays <= EXPIRY_WARNING_DAYS;
+  };
+
+  const filteredByFacility = useMemo(() => {
     if (facilityFilter === "All") return medicines;
     return medicines.filter(med => med.facility.type === facilityFilter);
   }, [medicines, facilityFilter]);
+
+  const filteredMedicines = useMemo(() => {
+    let filteredList: Medicine[] = filteredByFacility;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filteredList = filteredList.filter(med => 
+        med.name.toLowerCase().includes(query) ||
+        med.facility.name.toLowerCase().includes(query)
+      );
+    }
+
+    return filteredList;
+  }, [filteredByFacility, searchQuery]);
 
   const currentMedicines = useMemo(() => {
     const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
@@ -318,7 +342,7 @@ export default function VeterinaryMedicineDashboard() {
                 </Alert>
               )}
 
-              {/* Charts in Same Row with Spacing */}
+              {/* Charts */}
               {filteredMedicines.length > 0 && (
                 <div className="mt-6">
                   <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -332,83 +356,200 @@ export default function VeterinaryMedicineDashboard() {
                 </div>
               )}
 
-              <Card className="shadow-lg mt-4">
-                <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                  <h1 className="text-xl md:text-2xl font-bold">Veterinary Medicine Dashboard</h1>
-                  <div className="flex flex-col md:flex-row items-center gap-2">
-                    <Link href="/dashboard/add">
-                      <Button className="bg-gray-700 hover:bg-gray-800 text-white">+ Add Medicine</Button>
-                    </Link>
-                    <select 
-                      value={facilityFilter} 
-                      onChange={(e) => setFacilityFilter(e.target.value)}
-                      className="p-2 border rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="All">All Facilities</option>
-                      <option value="Dispensary">Dispensaries</option>
-                      <option value="Hospital">Hospitals</option>
-                      <option value="ClinicianCenter">Clinician Centers</option>
-                      <option value="Polyclinic">Polyclinics</option>
-                    </select>
-                    <Button 
-                      className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 text-xs" 
-                      size="sm" 
-                      onClick={exportToPDF}
-                    >
-                      <FileText size={14} className="mr-1" /> Export as PDF
-                    </Button>
-                    <Button 
-                      className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 text-xs" 
-                      size="sm" 
-                      onClick={exportToExcel}
-                    >
-                      <FileSpreadsheet size={14} className="mr-1" /> Export as Excel
-                    </Button>
+              <Card className="shadow-lg mt-4 border-t-4 border-t-blue-600">
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-800">Veterinary Medicine Dashboard</h1>
+                      <p className="text-gray-500 text-sm mt-1">Manage and track your inventory across facilities</p>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <select 
+                          value={facilityFilter} 
+                          onChange={(e) => setFacilityFilter(e.target.value)}
+                          className="p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full sm:w-40"
+                        >
+                          <option value="All">All Facilities</option>
+                          <option value="Dispensary">Dispensaries</option>
+                          <option value="Hospital">Hospitals</option>
+                          <option value="ClinicianCenter">Clinician Centers</option>
+                          <option value="Polyclinic">Polyclinics</option>
+                        </select>
+                        <div className="w-full sm:w-64">
+                          <Input
+                            type="text"
+                            placeholder="Search medicines..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="p-2 border rounded-md bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Link href="/dashboard/add" className="w-full sm:w-auto">
+                          <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
+                            <Plus size={16} className="mr-1" /> Add Medicine
+                          </Button>
+                        </Link>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="border-gray-300 w-full sm:w-auto">
+                              <FileText size={16} className="mr-1" /> Export <ChevronDown size={14} className="ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={exportToPDF}>
+                              <FileText size={14} className="mr-2" /> Export as PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={exportToExcel}>
+                              <FileSpreadsheet size={14} className="mr-2" /> Export as Excel
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
                   </div>
                 </CardHeader>
+                
                 <CardContent>
+                  {/* Stats summary row */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-none shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-gray-500 text-sm">Total Medicines</p>
+                            <p className="text-2xl font-bold text-blue-800">{filteredMedicines.length}</p>
+                          </div>
+                          <div className="bg-blue-200 p-2 rounded-full">
+                            <Pill className="w-5 h-5 text-blue-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-red-50 to-red-100 border-none shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-gray-500 text-sm">Low Stock</p>
+                            <p className="text-2xl font-bold text-red-800">
+                              {filteredMedicines.filter(med => med.stock < med.weeklyRequirement).length}
+                            </p>
+                          </div>
+                          <div className="bg-red-200 p-2 rounded-full">
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-none shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-gray-500 text-sm">Expiring Soon</p>
+                            <p className="text-2xl font-bold text-amber-800">
+                              {filteredMedicines.filter(med => isExpiringSoon(med.expiryDate)).length}
+                            </p>
+                          </div>
+                          <div className="bg-amber-200 p-2 rounded-full">
+                            <Clock className="w-5 h-5 text-amber-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-none shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-gray-500 text-sm">Healthy Stock</p>
+                            <p className="text-2xl font-bold text-green-800">
+                              {filteredMedicines.filter(med => 
+                                med.stock >= med.weeklyRequirement && !isExpiringSoon(med.expiryDate)
+                              ).length}
+                            </p>
+                          </div>
+                          <div className="bg-green-200 p-2 rounded-full">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
                   {isMobile ? (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {currentMedicines.map((med) => (
-                        <Card key={med.id} className="shadow-md border-l-4 border-blue-500 bg-white rounded-lg overflow-hidden">
+                        <Card key={med.id} className="shadow-sm border-l-4 overflow-hidden transition-all duration-200 hover:shadow-md">
                           <CardContent className="p-4">
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center mb-3">
                               <h2 className="text-lg font-bold text-gray-800">{med.name}</h2>
                               <Badge className={cn(
-                                "px-2 py-1 text-xs",
+                                "px-2 py-1 rounded-full text-xs font-medium",
                                 getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)
                               )}>
                                 {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
                               </Badge>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div className="bg-blue-50 p-2 rounded-md">
-                                <p className="text-gray-600"><strong>Stock:</strong></p>
-                                <p className="text-blue-700 font-semibold">{med.stock}</p>
+                            
+                            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                              <div className="bg-blue-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Package className="w-4 h-4 text-blue-600" />
+                                  <p className="text-gray-600 font-medium">Current Stock</p>
+                                </div>
+                                <p className={cn(
+                                  "text-lg font-bold",
+                                  med.stock < med.weeklyRequirement ? "text-red-600" : "text-blue-700"
+                                )}>
+                                  {med.stock}
+                                </p>
                               </div>
-                              <div className="bg-blue-50 p-2 rounded-md">
-                                <p className="text-gray-600"><strong>Weekly:</strong></p>
-                                <p className="text-blue-700 font-semibold">{med.weeklyRequirement}</p>
+                              
+                              <div className="bg-purple-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <BarChart className="w-4 h-4 text-purple-600" />
+                                  <p className="text-gray-600 font-medium">Weekly Need</p>
+                                </div>
+                                <p className="text-lg font-bold text-purple-700">{med.weeklyRequirement}</p>
                               </div>
-                              <div className="bg-gray-50 p-2 rounded-md col-span-2">
-                                <p className="text-gray-600"><strong>Expiry:</strong></p>
-                                <p className={cn("font-semibold", getExpiryColor(med.expiryDate))}>
+                              
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Calendar className="w-4 h-4 text-gray-600" />
+                                  <p className="text-gray-600 font-medium">Expiry Date</p>
+                                </div>
+                                <p className={cn(
+                                  "text-lg font-bold", 
+                                  getExpiryColor(med.expiryDate)
+                                )}>
                                   {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
                                 </p>
                               </div>
-                              <div className="bg-gray-50 p-2 rounded-md col-span-2">
-                                <p className="text-gray-600"><strong>Facility:</strong></p>
-                                <p className="text-gray-800">{med.facility.name}</p>
+                              
+                              <div className="bg-green-50 p-3 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Building2 className="w-4 h-4 text-green-600" />
+                                  <p className="text-gray-600 font-medium">Facility</p>
+                                </div>
+                                <p className="text-lg font-bold text-green-700">{med.facility.name}</p>
                               </div>
                             </div>
-                            <div className="mt-4 flex flex-col gap-2">
-                              <div className="flex items-center gap-2">
+                            
+                            <div className="border-t pt-3">
+                              <p className="text-sm text-gray-500 mb-2">Log today's usage:</p>
+                              <div className="flex items-center gap-2 mb-3">
                                 <Input
                                   type="number"
                                   placeholder="Usage"
                                   value={usageInputs[med.id] || ""}
                                   onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                                  className="w-24 bg-gray-100 border-gray-300"
+                                  className="w-24 bg-gray-50 border-gray-300"
                                   min="0"
                                 />
                                 <Button
@@ -417,19 +558,25 @@ export default function VeterinaryMedicineDashboard() {
                                   disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
                                   className="bg-teal-600 hover:bg-teal-700"
                                 >
-                                  Log
+                                  <Check className="w-4 h-4 mr-1" /> Log
                                 </Button>
                               </div>
+                              
                               <div className="flex flex-wrap gap-2">
                                 <Link href={`/dashboard/edit/${med.id}`}>
                                   <Button size="sm" variant="outline" className="flex items-center gap-1">
                                     <Edit2 className="w-4 h-4" /> Edit
                                   </Button>
                                 </Link>
+                                <Link href={`/dashboard/usage/${med.id}`}>
+                                  <Button size="sm" variant="outline" className="flex items-center gap-1">
+                                    <BarChart2 className="w-4 h-4" /> Usage History
+                                  </Button>
+                                </Link>
                                 <Button 
                                   size="sm" 
-                                  variant="destructive" 
-                                  className="flex items-center gap-1"
+                                  variant="outline" 
+                                  className="flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
                                   onClick={() => {
                                     setIsModalOpen(true);
                                     setDeleteId(med.id);
@@ -437,11 +584,6 @@ export default function VeterinaryMedicineDashboard() {
                                 >
                                   <Trash2 className="w-4 h-4" /> Delete
                                 </Button>
-                                <Link href={`/dashboard/usage/${med.id}`}>
-                                  <Button size="sm" variant="outline" className="flex items-center gap-1">
-                                    <BarChart2 className="w-4 h-4" /> Usage
-                                  </Button>
-                                </Link>
                               </div>
                             </div>
                           </CardContent>
@@ -450,147 +592,166 @@ export default function VeterinaryMedicineDashboard() {
                     </div>
                   ) : (
                     <TooltipProvider>
-                      <div className="overflow-x-auto">
-                        <Table className="w-full">
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Stock</TableHead>
-                              <TableHead>Weekly Requirement</TableHead>
-                              <TableHead>Expiry Date</TableHead>
-                              <TableHead>Facility</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Today’s Usage</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {currentMedicines.map((med) => (
-                              <TableRow key={med.id}>
-                                <TableCell>{med.name}</TableCell>
-                                <TableCell>{med.stock}</TableCell>
-                                <TableCell>{med.weeklyRequirement}</TableCell>
-                                <TableCell className={getExpiryColor(med.expiryDate)}>
-                                  {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
-                                </TableCell>
-                                <TableCell>{med.facility.name}</TableCell>
-                                <TableCell>
-                                  <Badge className={getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)}>
-                                    {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      placeholder="Usage"
-                                      value={usageInputs[med.id] || ""}
-                                      onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
-                                      className="w-20"
-                                      min="0"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleUsageSubmit(med.id)}
-                                      disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
-                                    >
-                                      Log
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Link href={`/dashboard/edit/${med.id}`}>
-                                          <Button size="icon" variant="ghost" className="hover:bg-gray-200">
-                                            <Edit2 className="w-4 h-4 text-blue-600" />
-                                          </Button>
-                                        </Link>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Edit</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button 
-                                          size="icon" 
-                                          variant="ghost" 
-                                          className="hover:bg-gray-200"
-                                          onClick={() => {
-                                            setIsModalOpen(true);
-                                            setDeleteId(med.id);
-                                          }}
-                                        >
-                                          <Trash2 className="w-4 h-4 text-red-600" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Delete</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Link href={`/dashboard/usage/${med.id}`}>
-                                          <Button size="icon" variant="ghost" className="hover:bg-gray-200">
-                                            <BarChart2 className="w-4 h-4 text-teal-600" />
-                                          </Button>
-                                        </Link>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>View Usage</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </TableCell>
+                      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-50">
+                                <TableHead className="font-semibold">Medicine Name</TableHead>
+                                <TableHead className="font-semibold">Stock</TableHead>
+                                <TableHead className="font-semibold">Weekly Req.</TableHead>
+                                <TableHead className="font-semibold">Expiry Date</TableHead>
+                                <TableHead className="font-semibold">Facility</TableHead>
+                                <TableHead className="font-semibold">Status</TableHead>
+                                <TableHead className="font-semibold">Usage</TableHead>
+                                <TableHead className="font-semibold">Actions</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {currentMedicines.map((med) => (
+                                <TableRow key={med.id} className="hover:bg-gray-50 transition-colors">
+                                  <TableCell className="font-medium">{med.name}</TableCell>
+                                  <TableCell className={cn(
+                                    "font-medium",
+                                    med.stock < med.weeklyRequirement ? "text-red-600" : "text-blue-600"
+                                  )}>
+                                    {med.stock}
+                                  </TableCell>
+                                  <TableCell>{med.weeklyRequirement}</TableCell>
+                                  <TableCell className={getExpiryColor(med.expiryDate)}>
+                                    {med.expiryDate ? formatDate(med.expiryDate) : "N/A"}
+                                  </TableCell>
+                                  <TableCell>{med.facility.name}</TableCell>
+                                  <TableCell>
+                                    <Badge className={cn(
+                                      "rounded-full text-xs font-medium",
+                                      getBadgeColor(med.stock, med.weeklyRequirement, med.expiryDate)
+                                    )}>
+                                      {getStockStatus(med.stock, med.weeklyRequirement, med.expiryDate)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        placeholder="Usage"
+                                        value={usageInputs[med.id] || ""}
+                                        onChange={(e) => setUsageInputs(prev => ({ ...prev, [med.id]: e.target.value }))}
+                                        className="w-20 h-8 text-sm"
+                                        min="0"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        className="h-8 bg-teal-600 hover:bg-teal-700"
+                                        onClick={() => handleUsageSubmit(med.id)}
+                                        disabled={!usageInputs[med.id] || parseInt(usageInputs[med.id]) <= 0}
+                                      >
+                                        Log
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Link href={`/dashboard/edit/${med.id}`}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-blue-100">
+                                              <Edit2 className="w-4 h-4 text-blue-600" />
+                                            </Button>
+                                          </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Edit medicine</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Link href={`/dashboard/usage/${med.id}`}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-green-100">
+                                              <BarChart2 className="w-4 h-4 text-green-600" />
+                                            </Button>
+                                          </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>View usage history</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            size="icon" 
+                                            variant="ghost" 
+                                            className="h-8 w-8 rounded-full hover:bg-red-100"
+                                            onClick={() => {
+                                              setIsModalOpen(true);
+                                              setDeleteId(med.id);
+                                            }}
+                                          >
+                                            <Trash2 className="w-4 h-4 text-red-600" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Delete medicine</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     </TooltipProvider>
                   )}
-                  <div className="container mx-auto p-4 pb-2"/>
-                  <Pagination 
-                    currentPage={currentPage} 
-                    totalItems={filteredMedicines.length} 
-                    itemsPerPage={ITEMS_PER_PAGE} 
-                    setPage={setCurrentPage} 
-                  />
+                  
+                  <div className="mt-6 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">
+                      Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredMedicines.length)} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredMedicines.length)} of {filteredMedicines.length} items
+                    </p>
+                    <Pagination 
+                      currentPage={currentPage} 
+                      totalItems={filteredMedicines.length} 
+                      itemsPerPage={ITEMS_PER_PAGE} 
+                      setPage={setCurrentPage} 
+                    />
+                  </div>
                 </CardContent>
               </Card>
+
+              {/* Confirmation Modal */}
+              <Dialog 
+                open={isModalOpen} 
+                onOpenChange={(open) => {
+                  setIsModalOpen(open);
+                  if (!open) setDeleteId(null);
+                }}
+              >
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Confirm Delete</DialogTitle>
+                  </DialogHeader>
+                  <p>Are you sure you want to remove this veterinary medicine? This action cannot be undone.</p>
+                  <DialogFooter className="mt-4 flex justify-end space-x-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsModalOpen(false);
+                        setDeleteId(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDelete}>
+                      Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </>
           )}
-
-          <Dialog 
-            open={isModalOpen} 
-            onOpenChange={(open) => {
-              setIsModalOpen(open);
-              if (!open) setDeleteId(null);
-            }}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Confirm Delete</DialogTitle>
-              </DialogHeader>
-              <p>Are you sure you want to remove this veterinary medicine?</p>
-              <DialogFooter className="mt-4 flex justify-end space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setDeleteId(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Delete
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
     </div>
