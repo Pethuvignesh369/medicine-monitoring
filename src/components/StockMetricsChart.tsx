@@ -73,9 +73,10 @@ export default function StockMetricsChart({ medicines }: StockMetricsChartProps)
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-gray-800 text-white p-3 rounded-md shadow-lg text-sm border border-gray-700">
-          <p className="font-semibold mb-1">{data.name}</p>
-          <p>Count: {data.value}</p>
+        <div className="bg-gray-800 text-white p-2 rounded shadow-lg text-xs">
+          <p><strong>{data.name}</strong></p>
+          <p>Value: {data.value}</p>
+          {/* Add more context if available */}
         </div>
       );
     }
