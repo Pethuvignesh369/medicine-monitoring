@@ -69,9 +69,9 @@ export default function AddFacility() {
   };
 
   const handleCancel = () => {
-    console.log("Cancel clicked, isSubmitting:", isSubmitting); // Debug log
+    console.log("Cancel clicked, isSubmitting:", isSubmitting);
     if (!isSubmitting) {
-      router.push("/admin/facilities");
+      router.push("/dashboard"); // Changed from "/admin/facilities" to "/dashboard"
     }
   };
 
