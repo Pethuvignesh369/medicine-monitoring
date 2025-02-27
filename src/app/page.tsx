@@ -1,18 +1,30 @@
 "use client";
-import React, { useState } from 'react';
+
+import React from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search } from "lucide-react";
+import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 
 export default function HomePage() {
   const router = useRouter();
   const [hoverCard, setHoverCard] = useState<number | null>(null);
-  
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Added auth state
+
+  // Check auth status on mount
+  useEffect(() => {
+    const authCookie = document.cookie.split("; ").find(row => row.startsWith("auth="));
+    const authenticated = authCookie?.split("=")[1] === "true";
+    console.log("Homepage - Authenticated:", authenticated);
+    setIsAuthenticated(authenticated);
+  }, []);
+
   const handleCardHover = (index: number | null): void => {
     setHoverCard(index);
   };
-  
+
   const cards = [
     {
       title: "Add Medicine",
@@ -20,7 +32,7 @@ export default function HomePage() {
       icon: <PlusCircle className="w-8 h-8" />,
       color: "bg-gradient-to-br from-green-400 to-green-600",
       textColor: "text-white",
-      path: "/dashboard/add"
+      path: "/dashboard/add",
     },
     {
       title: "View Dashboard",
@@ -28,7 +40,7 @@ export default function HomePage() {
       icon: <LayoutDashboard className="w-8 h-8" />,
       color: "bg-gradient-to-br from-blue-400 to-blue-600",
       textColor: "text-white",
-      path: "/dashboard"
+      path: "/dashboard",
     },
     {
       title: "Add Facility",
@@ -36,32 +48,8 @@ export default function HomePage() {
       icon: <Building2 className="w-8 h-8" />,
       color: "bg-gradient-to-br from-purple-400 to-purple-600",
       textColor: "text-white",
-      path: "/admin/facilities"
+      path: "/admin/facilities",
     },
-    // {
-    //   title: "Notifications",
-    //   description: "Check medicine expiry alerts and inventory notifications.",
-    //   icon: <Bell className="w-8 h-8" />,
-    //   color: "bg-gradient-to-br from-amber-400 to-amber-600",
-    //   textColor: "text-white",
-    //   path: "/notifications"
-    // },
-    // {
-    //   title: "Analytics",
-    //   description: "View medication usage trends and inventory statistics.",
-    //   icon: <TrendingUp className="w-8 h-8" />,
-    //   color: "bg-gradient-to-br from-cyan-400 to-cyan-600", 
-    //   textColor: "text-white",
-    //   path: "/analytics"
-    // },
-    // {
-    //   title: "Search Medicines",
-    //   description: "Find medicines by name, category, or inventory status.",
-    //   icon: <Search className="w-8 h-8" />,
-    //   color: "bg-gradient-to-br from-indigo-400 to-indigo-600",
-    //   textColor: "text-white",
-    //   path: "/search"
-    // }
   ];
 
   return (
@@ -106,7 +94,21 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          
+
+          {/* Login/Dashboard Button */}
+          <div className="mt-16 mb-8 flex justify-center">
+            <Button
+              onClick={() => router.push(isAuthenticated ? "/dashboard" : "/login")}
+              className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white px-8 py-4 text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center"
+            >
+              <span className="absolute right-full top-0 h-full w-12 bg-white/20 skew-x-12 transition-all group-hover:right-0 duration-700 z-0"></span>
+              <LogIn className="w-5 h-5 mr-3" />
+              <span className="relative z-10">
+                {isAuthenticated ? "Go to Dashboard" : "Login to Manage Medicines"}
+              </span>
+            </Button>
+          </div>
+
           <div className="mt-12 bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Quick Stats</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

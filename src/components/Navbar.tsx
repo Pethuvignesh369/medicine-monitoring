@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, Bell, Home, BarChart2, PlusCircle, Building } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, X, Bell, Home, BarChart2, PlusCircle, Building, LogIn, LogOut } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,33 +34,87 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
+  // Check auth status based on cookie
+  const checkAuth = () => {
+    const authCookie = document.cookie.split("; ").find(row => row.startsWith("auth="));
+    const authenticated = authCookie?.split("=")[1] === "true";
+    console.log("Checking auth - Pathname:", pathname, "Cookie:", authCookie, "Authenticated:", authenticated);
+    return authenticated;
+  };
+
+  // Update auth state on mount, route change, and poll briefly
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("/api/medicines");
-        if (!res.ok) throw new Error(`Failed to fetch medicines: ${res.status}`);
-        const medicines: Medicine[] = await res.json();
-        const newAlerts = medicines.reduce((acc: AlertItem[], med: Medicine) => {
-          if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
-            acc.push({ id: med.id, message: `⚠️ ${med.name} is expired at ${med.facility.name}!` });
-          } else if (med.stock < med.weeklyRequirement) {
-            acc.push({ id: med.id, message: `⚠️ ${med.name} is running low at ${med.facility.name}!` });
-          }
-          return acc;
-        }, []);
-        setAlerts(newAlerts);
-      } catch (error) {
-        console.error("Error fetching alerts:", error);
+    const updateAuth = () => {
+      const authenticated = checkAuth();
+      setIsAuthenticated(authenticated);
+
+      if (authenticated) {
+        fetchAlerts();
+      } else {
+        setAlerts([]);
       }
     };
 
-    fetchData();
-  }, []);
+    updateAuth(); // Initial check
+
+    // Poll for cookie change (max 5 seconds, every 500ms)
+    const interval = setInterval(() => {
+      const authenticated = checkAuth();
+      if (authenticated !== isAuthenticated) {
+        setIsAuthenticated(authenticated);
+        if (authenticated) fetchAlerts();
+        else setAlerts([]);
+      }
+    }, 500);
+
+    // Cleanup after 5 seconds or on unmount
+    const timeout = setTimeout(() => clearInterval(interval), 5000);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [pathname]);
+
+  // Fetch alerts if authenticated
+  const fetchAlerts = async () => {
+    try {
+      const res = await fetch("/api/medicines");
+      if (!res.ok) throw new Error(`Failed to fetch medicines: ${res.status}`);
+      const medicines: Medicine[] = await res.json();
+      const newAlerts = medicines.reduce((acc: AlertItem[], med: Medicine) => {
+        if (med.expiryDate && new Date(med.expiryDate) < new Date()) {
+          acc.push({ id: med.id, message: `⚠️ ${med.name} is expired at ${med.facility.name}!` });
+        } else if (med.stock < med.weeklyRequirement) {
+          acc.push({ id: med.id, message: `⚠️ ${med.name} is running low at ${med.facility.name}!` });
+        }
+        return acc;
+      }, []);
+      setAlerts(newAlerts);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+    }
+  };
 
   const dismissAlert = (id: number) => {
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
+  };
+
+  const handleLogout = () => {
+    console.log("Logging out...");
+    document.cookie = "auth=; Max-Age=0; path=/";
+    setIsAuthenticated(false);
+    setAlerts([]);
+    router.push("/login");
+    window.location.reload(); // Full reload to ensure navbar updates
+  };
+
+  const handleLogin = () => {
+    console.log("Navigating to login...");
+    router.push("/login");
   };
 
   const navLinks = [
@@ -109,23 +163,50 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Notification Bell and Mobile Menu Button */}
+          {/* Notification Bell, Login/Logout, and Mobile Menu Button */}
           <div className="flex items-center space-x-4">
-            {/* Notification Bell */}
-            <div className="relative">
-              <button
-                className="p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-300 focus:ring-opacity-50"
-                onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-                aria-label="Toggle alerts"
-              >
-                <Bell className="w-5 h-5" />
-                {alerts.length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs flex items-center justify-center min-w-5 h-5 rounded-full animate-pulse">
-                    {alerts.length}
-                  </Badge>
-                )}
-              </button>
+            {/* Debug Indicator (remove for production) */}
+            <div className="hidden text-xs bg-white/10 px-2 py-1 rounded">
+              {isAuthenticated ? "Logged In" : "Not Logged In"}
             </div>
+
+            {/* Notification Bell (only if authenticated) */}
+            {isAuthenticated && (
+              <div className="relative">
+                <button
+                  className="p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-300 focus:ring-opacity-50"
+                  onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+                  aria-label="Toggle alerts"
+                >
+                  <Bell className="w-5 h-5" />
+                  {alerts.length > 0 && (
+                    <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs flex items-center justify-center min-w-5 h-5 rounded-full animate-pulse">
+                      {alerts.length}
+                    </Badge>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Login/Logout Button */}
+            <Button
+              variant="ghost"
+              className="p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-300 focus:ring-opacity-50"
+              onClick={isAuthenticated ? handleLogout : handleLogin}
+              aria-label={isAuthenticated ? "Logout" : "Login"}
+            >
+              {isAuthenticated ? (
+                <>
+                  <LogOut className="w-5 h-5" />
+                  <span className="ml-2 sr-only md:not-sr-only">Logout</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  <span className="ml-2 sr-only md:not-sr-only">Login</span>
+                </>
+              )}
+            </Button>
 
             {/* Mobile Menu Button */}
             <button
@@ -164,15 +245,26 @@ export default function Navbar() {
                     <span className="font-medium">{link.label}</span>
                   </Link>
                 ))}
+                {/* Mobile Login/Logout */}
+                <button
+                  className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-white/80 hover:bg-white/10 hover:text-white w-full text-left"
+                  onClick={() => {
+                    setIsOpen(false);
+                    isAuthenticated ? handleLogout() : router.push("/login");
+                  }}
+                >
+                  {isAuthenticated ? <LogOut className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+                  <span className="font-medium">{isAuthenticated ? "Logout" : "Login"}</span>
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Alerts Panel */}
+      {/* Alerts Panel (only if authenticated) */}
       <AnimatePresence>
-        {isAlertsOpen && alerts.length > 0 && (
+        {isAuthenticated && isAlertsOpen && alerts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}

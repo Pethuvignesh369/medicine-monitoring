@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight, CheckCircle, Plus, Pill, AlertTriangle, Clock, ChevronDown, Package, Calendar, Check, BarChart } from "lucide-react"; // Removed Search
+import { Activity, Loader2, FileText, FileSpreadsheet, Edit2, Trash2, BarChart2, Home, PlusCircle, Building2, ChevronLeft, ChevronRight, CheckCircle, Plus, Pill, AlertTriangle, Clock, ChevronDown, Package, Calendar, Check, BarChart, Settings } from "lucide-react";
 import MedicineStockChart from "@/components/MedicineStockChart";
 import StockMetricsChart from "@/components/StockMetricsChart";
 import { Pagination } from "@/components/ui/pagination";
@@ -56,6 +56,7 @@ export default function VeterinaryMedicineDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     let mounted = true;
@@ -258,77 +259,218 @@ export default function VeterinaryMedicineDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar (Desktop Only) */}
+      {/* Enhanced Sidebar (Desktop Only) */}
       {!isMobile && (
         <div
           className={cn(
             "fixed top-0 left-0 h-full bg-gradient-to-b from-blue-900 to-teal-800 text-white shadow-lg z-20 transition-all duration-300 ease-in-out",
-            isSidebarExpanded ? "w-64" : "w-16"
+            isSidebarExpanded ? "w-64" : "w-20"
           )}
         >
+          {/* Sidebar Header */}
           <div className={cn(
-            "flex items-center p-4 border-b border-teal-700",
+            "flex items-center p-4 border-b border-teal-700/50",
             isSidebarExpanded ? "justify-between" : "justify-center"
           )}>
-            {isSidebarExpanded && <h2 className="text-xl font-bold">Menu</h2>}
+            {isSidebarExpanded ? (
+              <div className="flex items-center space-x-2">
+                <Activity className="w-6 h-6 text-teal-300" />
+                <h2 className="text-xl font-bold">VetMed</h2>
+              </div>
+            ) : (
+              <Activity className="w-8 h-8 text-teal-300" />
+            )}
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-              className="text-white hover:text-teal-300"
+              className="text-white hover:bg-white/10 rounded-full p-1"
             >
-              {isSidebarExpanded ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+              {isSidebarExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
             </Button>
           </div>
-          <nav className="p-4 space-y-2">
-            <Link
-              href="/"
-              className={cn(
-                "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
-                !isSidebarExpanded && "justify-center"
-              )}
-            >
-              <Home className="w-5 h-5" />
-              {isSidebarExpanded && <span>Home</span>}
-            </Link>
-            <Link
-              href="/dashboard"
-              className={cn(
-                "flex items-center gap-2 p-2 rounded-md bg-white/20 hover:bg-white/30 transition-all duration-200",
-                !isSidebarExpanded && "justify-center"
-              )}
-            >
-              <BarChart2 className="w-5 h-5" />
-              {isSidebarExpanded && <span>Dashboard</span>}
-            </Link>
-            <Link
-              href="/dashboard/add"
-              className={cn(
-                "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
-                !isSidebarExpanded && "justify-center"
-              )}
-            >
-              <PlusCircle className="w-5 h-5" />
-              {isSidebarExpanded && <span>Add Medicine</span>}
-            </Link>
-            <Link
-              href="/admin/facilities"
-              className={cn(
-                "flex items-center gap-2 p-2 rounded-md bg-white/10 hover:bg-white/20 transition-all duration-200",
-                !isSidebarExpanded && "justify-center"
-              )}
-            >
-              <Building2 className="w-5 h-5" />
-              {isSidebarExpanded && <span>Add Facility</span>}
-            </Link>
-          </nav>
+
+          {/* Navigation Section */}
+          <div className="py-6">
+            <div className="px-4 mb-2">
+              <p className={cn(
+                "text-xs uppercase tracking-wider text-teal-300/70",
+                !isSidebarExpanded && "text-center"
+              )}>
+                {isSidebarExpanded ? "Main Navigation" : "Menu"}
+              </p>
+            </div>
+            
+            <nav className="space-y-1 px-3">
+              {/* Home */}
+              <Link
+                href="/"
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group relative",
+                  pathname === "/" 
+                    ? "bg-white/20 text-white" 
+                    : "hover:bg-white/10 text-white/80 hover:text-white",
+                  !isSidebarExpanded && "justify-center p-3"
+                )}
+              >
+                <div className={cn(
+                  "relative flex items-center justify-center",
+                  pathname === "/" && "text-teal-300"
+                )}>
+                  <Home className={cn("w-5 h-5")} />
+                  {!isSidebarExpanded && pathname === "/" && (
+                    <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-teal-400"></span>
+                  )}
+                </div>
+                {isSidebarExpanded && <span>Home</span>}
+                
+                {/* Tooltip for collapsed state */}
+                {!isSidebarExpanded && (
+                  <div className="absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs font-medium text-gray-100 opacity-0 shadow group-hover:opacity-100 whitespace-nowrap z-50">
+                    Home
+                  </div>
+                )}
+              </Link>
+              
+              {/* Dashboard */}
+              <Link
+                href="/dashboard"
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group relative",
+                  pathname === "/dashboard" 
+                    ? "bg-white/20 text-white" 
+                    : "hover:bg-white/10 text-white/80 hover:text-white",
+                  !isSidebarExpanded && "justify-center p-3"
+                )}
+              >
+                <div className={cn(
+                  "relative flex items-center justify-center",
+                  pathname === "/dashboard" && "text-teal-300"
+                )}>
+                  <BarChart2 className="w-5 h-5" />
+                  {!isSidebarExpanded && pathname === "/dashboard" && (
+                    <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-teal-400"></span>
+                  )}
+                </div>
+                {isSidebarExpanded && <span>Dashboard</span>}
+                
+                {/* Tooltip for collapsed state */}
+                {!isSidebarExpanded && (
+                  <div className="absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs font-medium text-gray-100 opacity-0 shadow group-hover:opacity-100 whitespace-nowrap z-50">
+                    Dashboard
+                  </div>
+                )}
+              </Link>
+              
+              {/* Add Medicine */}
+              <Link
+                href="/dashboard/add"
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group relative",
+                  pathname === "/dashboard/add" 
+                    ? "bg-white/20 text-white" 
+                    : "hover:bg-white/10 text-white/80 hover:text-white",
+                  !isSidebarExpanded && "justify-center p-3"
+                )}
+              >
+                <div className={cn(
+                  "relative flex items-center justify-center",
+                  pathname === "/dashboard/add" && "text-teal-300"
+                )}>
+                  <PlusCircle className="w-5 h-5" />
+                  {!isSidebarExpanded && pathname === "/dashboard/add" && (
+                    <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-teal-400"></span>
+                  )}
+                </div>
+                {isSidebarExpanded && <span>Add Medicine</span>}
+                
+                {/* Tooltip for collapsed state */}
+                {!isSidebarExpanded && (
+                  <div className="absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs font-medium text-gray-100 opacity-0 shadow group-hover:opacity-100 whitespace-nowrap z-50">
+                    Add Medicine
+                  </div>
+                )}
+              </Link>
+            </nav>
+            
+            {/* Admin Section */}
+            <div className="mt-8 px-4 mb-2">
+              <p className={cn(
+                "text-xs uppercase tracking-wider text-teal-300/70",
+                !isSidebarExpanded && "text-center"
+              )}>
+                {isSidebarExpanded ? "Administration" : "Admin"}
+              </p>
+            </div>
+            
+            <nav className="space-y-1 px-3">
+              {/* Facilities */}
+              <Link
+                href="/admin/facilities"
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group relative",
+                  pathname === "/admin/facilities" 
+                    ? "bg-white/20 text-white" 
+                    : "hover:bg-white/10 text-white/80 hover:text-white",
+                  !isSidebarExpanded && "justify-center p-3"
+                )}
+              >
+                <div className={cn(
+                  "relative flex items-center justify-center",
+                  pathname === "/admin/facilities" && "text-teal-300"
+                )}>
+                  <Building2 className="w-5 h-5" />
+                  {!isSidebarExpanded && pathname === "/admin/facilities" && (
+                    <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-teal-400"></span>
+                  )}
+                </div>
+                {isSidebarExpanded && <span>Facilities</span>}
+                
+                {/* Tooltip for collapsed state */}
+                {!isSidebarExpanded && (
+                  <div className="absolute left-full ml-2 rounded bg-gray-900 px-2 py-1 text-xs font-medium text-gray-100 opacity-0 shadow group-hover:opacity-100 whitespace-nowrap z-50">
+                    Facilities
+                  </div>
+                )}
+              </Link>
+            </nav>
+          </div>
+          
+          {/* User Profile Section */}
+          <div className={cn(
+            "absolute bottom-0 left-0 right-0 border-t border-teal-700/50 p-4",
+            isSidebarExpanded ? "flex items-center justify-between" : "flex flex-col items-center"
+          )}>
+            <div className={cn(
+              "flex items-center",
+              !isSidebarExpanded && "flex-col space-y-1"
+            )}>
+              <div className="h-8 w-8 rounded-full bg-teal-200 flex items-center justify-center text-teal-800 font-semibold text-sm">
+                A
+              </div>
+              {isSidebarExpanded && <span className="ml-2 text-sm">Admin User</span>}
+            </div>
+            
+            {isSidebarExpanded ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/10 rounded-full"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            ) : null}
+          </div>
         </div>
       )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {isMobile && <Navbar />}
-        <div className={cn("p-4", isMobile ? "pt-20" : (isSidebarExpanded ? "pt-0 ml-64" : "pt-0 ml-16"))}>
+        <div className={cn(
+          "p-4",
+          isMobile ? "pt-20" : (isSidebarExpanded ? "pt-0 ml-72 pl-4" : "pt-0 ml-24 pl-4") // Adjusted margins and added padding-left
+        )}>
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="animate-spin text-gray-500 w-10 h-10" />
