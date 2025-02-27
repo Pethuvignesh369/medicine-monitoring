@@ -168,7 +168,7 @@ export default function LoginPage() {
 
           <div className="text-center mt-6">
             <p className="text-xs text-gray-500">
-              © 2024 Animal Husbandry Department, Government of Tamil Nadu. All rights reserved.
+              © 2025 Animal Husbandry Department, Government of Tamil Nadu. All rights reserved.
             </p>
           </div>
         </motion.div>
