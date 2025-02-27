@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (username === validUsername && password === validPassword) {
     // Set a simple cookie to mark user as authenticated
     const response = NextResponse.json({ success: true });
-    response.cookies.set("auth", "true", { path: "/", httpOnly: true, maxAge: 3600 }); // 1-hour session
+    response.cookies.set("auth", "true", { path: "/", httpOnly: true, secure: true, sameSite: "strict", maxAge: 60 * 60 * 24 * 7 }); // 7 days
     return response;
   }
 

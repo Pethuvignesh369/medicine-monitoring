@@ -38,15 +38,23 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Check auth status based on cookie
+  // Update the checkAuth function to be more robust
   const checkAuth = () => {
-    const authCookie = document.cookie.split("; ").find(row => row.startsWith("auth="));
-    const authenticated = authCookie?.split("=")[1] === "true";
-    console.log("Checking auth - Pathname:", pathname, "Cookie:", authCookie, "Authenticated:", authenticated);
-    return authenticated;
+    try {
+      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      }, {} as { [key: string]: string });
+      
+      return cookies['auth'] === 'true';
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      return false;
+    }
   };
 
-  // Update auth state on mount, route change, and poll briefly
+  // Modify the useEffect hook for better auth state management
   useEffect(() => {
     const updateAuth = () => {
       const authenticated = checkAuth();
@@ -59,23 +67,20 @@ export default function Navbar() {
       }
     };
 
-    updateAuth(); // Initial check
+    updateAuth();
 
-    // Poll for cookie change (max 5 seconds, every 500ms)
-    const interval = setInterval(() => {
-      const authenticated = checkAuth();
-      if (authenticated !== isAuthenticated) {
-        setIsAuthenticated(authenticated);
-        if (authenticated) fetchAlerts();
-        else setAlerts([]);
+    // Listen for storage events to handle auth changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth') {
+        updateAuth();
       }
-    }, 500);
+    };
 
-    // Cleanup after 5 seconds or on unmount
-    const timeout = setTimeout(() => clearInterval(interval), 5000);
+    window.addEventListener('storage', handleStorageChange);
+
+    // Cleanup
     return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [pathname]);
 
@@ -103,18 +108,21 @@ export default function Navbar() {
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   };
 
+  // Update the handleLogout function
   const handleLogout = () => {
-    console.log("Logging out...");
-    document.cookie = "auth=; Max-Age=0; path=/";
+    document.cookie = "auth=false; path=/; max-age=0";
+    localStorage.removeItem('auth'); // Clear local storage as well
     setIsAuthenticated(false);
     setAlerts([]);
-    router.push("/login");
-    window.location.reload(); // Full reload to ensure navbar updates
+    router.push('/login');
   };
 
+  // Update the handleLogin function
   const handleLogin = () => {
-    console.log("Navigating to login...");
-    router.push("/login");
+    document.cookie = "auth=true; path=/";
+    localStorage.setItem('auth', 'true');
+    setIsAuthenticated(true);
+    router.push('/dashboard');
   };
 
   const navLinks = [
@@ -196,15 +204,15 @@ export default function Navbar() {
               aria-label={isAuthenticated ? "Logout" : "Login"}
             >
               {isAuthenticated ? (
-                <>
+                <div className="flex items-center">
                   <LogOut className="w-5 h-5" />
-                  <span className="ml-2 sr-only md:not-sr-only">Logout</span>
-                </>
+                  <span className="ml-2 hidden md:inline">Logout</span>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center">
                   <LogIn className="w-5 h-5" />
-                  <span className="ml-2 sr-only md:not-sr-only">Login</span>
-                </>
+                  <span className="ml-2 hidden md:inline">Login</span>
+                </div>
               )}
             </Button>
 

@@ -4,7 +4,7 @@ import React from "react";
 import { useState, useEffect } from "react"; // Added useEffect
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, LogIn } from "lucide-react";
+import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, LogIn, Package, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 
@@ -109,24 +109,44 @@ export default function HomePage() {
             </Button>
           </div>
 
-          <div className="mt-12 bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Quick Stats</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500">Total Medicines</p>
-                <p className="text-2xl font-bold text-gray-800">248</p>
+          {/* Quick Stats Section */}
+          <div className="mt-12 bg-white/70 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-gray-50">
+            <h2 className="text-xl font-semibold mb-6 text-gray-800">Quick Stats</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {/* Total Medicines Card */}
+              <div className="bg-gradient-to-br from-sky-400 to-blue-400 p-4 rounded-xl shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-white font-medium">Total Medicines</p>
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-white mt-2">248</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500">Low Stock</p>
-                <p className="text-2xl font-bold text-red-600">12</p>
+
+              {/* Low Stock Card */}
+              <div className="bg-gradient-to-br from-pink-400 to-rose-400 p-4 rounded-xl shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-white font-medium">Low Stock</p>
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-white mt-2">12</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500">Expiring Soon</p>
-                <p className="text-2xl font-bold text-amber-600">8</p>
+
+              {/* Expiring Soon Card */}
+              <div className="bg-gradient-to-br from-yellow-400 to-orange-400 p-4 rounded-xl shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-white font-medium">Expiring Soon</p>
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-white mt-2">8</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-500">Facilities</p>
-                <p className="text-2xl font-bold text-gray-800">4</p>
+
+              {/* Facilities Card */}
+              <div className="bg-gradient-to-br from-teal-400 to-emerald-400 p-4 rounded-xl shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-white font-medium">Facilities</p>
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-2xl font-bold text-white mt-2">4</p>
               </div>
             </div>
           </div>
