@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, Bell, Home, BarChart2, PlusCircle, Building, LogIn, LogOut } from "lucide-react";
+import { Menu, X, Bell, Home, BarChart2, PlusCircle, Building, LogIn, LogOut, Sun, Moon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,13 +35,52 @@ export default function Navbar() {
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Check theme preference on mount
+  useEffect(() => {
+    // Check if user has a theme preference in localStorage
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    
+    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  };
 
   // Check auth status via server endpoint
   const checkAuth = async () => {
     try {
-      const res = await fetch("/api/check-auth", { credentials: "include" });
+      const res = await fetch("/api/check-auth", {
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
       if (!res.ok) throw new Error("Failed to check auth");
       const { isAuthenticated } = await res.json();
       console.log("Navbar checkAuth - Pathname:", pathname, "Server Auth:", isAuthenticated, "Time:", new Date().toISOString());
@@ -90,12 +129,12 @@ export default function Navbar() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [pathname]);
+  }, [pathname, isAuthenticated]);
 
   // Fetch alerts if authenticated
   const fetchAlerts = async () => {
     try {
-      const res = await fetch("/api/medicines");
+      const res = await fetch("/api/medicines", { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch medicines: ${res.status}`);
       const medicines: Medicine[] = await res.json();
       const newAlerts = medicines.reduce((acc: AlertItem[], med: Medicine) => {
@@ -116,12 +155,49 @@ export default function Navbar() {
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log("Logging out...");
-    document.cookie = "auth=; Max-Age=0; path=/";
-    setIsAuthenticated(false);
-    setAlerts([]);
-    window.location.href = "/login"; // Hard redirect
+    
+    try {
+      // Call the logout API to clear the HTTP-only cookie
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to logout");
+      }
+      
+      // Clear any client-side storage
+      localStorage.removeItem("auth");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      sessionStorage.removeItem("auth");
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      
+      // Also try to clear the cookie client-side (may not work for httpOnly cookies)
+      document.cookie = "auth=; Max-Age=0; path=/";
+      document.cookie = "auth=; Max-Age=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      
+      // Update state
+      setIsAuthenticated(false);
+      setAlerts([]);
+      
+      // Redirect with a cache-busting query parameter
+      window.location.href = `/login?logout=true&t=${Date.now()}`;
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Force redirect even if the API call fails
+      window.location.href = `/login?logout=true&t=${Date.now()}`;
+    }
   };
 
   const handleLogin = () => {
@@ -137,7 +213,7 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-gradient-to-r from-blue-800 via-teal-700 to-blue-800 text-white shadow-lg z-10">
+    <nav className="fixed top-0 left-0 w-full bg-gradient-to-r from-blue-800 via-teal-700 to-blue-800 text-white shadow-lg z-10 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex justify-between items-center h-16">
           {/* Brand with animated gradient */}
@@ -175,7 +251,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Notification Bell, Login/Logout, and Mobile Menu Button */}
+          {/* Notification Bell, Theme Toggle, Login/Logout, and Mobile Menu Button */}
           <div className="flex items-center space-x-4">
             {/* Debug Indicator */}
             <div className="text-xs bg-white/10 px-2 py-1 rounded">
@@ -199,6 +275,20 @@ export default function Navbar() {
                 </button>
               </div>
             )}
+
+            {/* Theme Toggle Button */}
+            <Button
+              variant="ghost"
+              className="p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-300 focus:ring-opacity-50"
+              onClick={toggleDarkMode}
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </Button>
 
             {/* Login/Logout Button */}
             <Button
@@ -257,6 +347,17 @@ export default function Navbar() {
                     <span className="font-medium">{link.label}</span>
                   </Link>
                 ))}
+                {/* Mobile Theme Toggle */}
+                <button
+                  className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-white/80 hover:bg-white/10 hover:text-white w-full text-left"
+                  onClick={() => {
+                    toggleDarkMode();
+                    // Don't close menu to provide immediate visual feedback
+                  }}
+                >
+                  {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  <span className="font-medium">{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
+                </button>
                 {/* Mobile Login/Logout */}
                 <button
                   className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-white/80 hover:bg-white/10 hover:text-white w-full text-left"
@@ -287,14 +388,14 @@ export default function Navbar() {
             {alerts.map((alert) => (
               <Alert
                 key={alert.id}
-                className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 shadow-lg rounded-md"
+                className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 shadow-lg rounded-md dark:from-yellow-900/50 dark:to-yellow-800/50 dark:text-yellow-200"
               >
                 <div className="flex justify-between items-center">
                   <AlertDescription className="font-medium">{alert.message}</AlertDescription>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-gray-600 hover:text-gray-800 hover:bg-yellow-200/50 rounded-full"
+                    className="text-gray-600 hover:text-gray-800 hover:bg-yellow-200/50 rounded-full dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-yellow-700/50"
                     onClick={() => dismissAlert(alert.id)}
                   >
                     <X className="w-4 h-4" />

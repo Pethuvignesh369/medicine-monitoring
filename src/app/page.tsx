@@ -4,7 +4,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, LogIn, Package, AlertTriangle, Clock, Eye } from "lucide-react";
+import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, Package, AlertTriangle, Clock, Eye, LineChart, CircleCheck, Database, BarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 
@@ -12,6 +12,7 @@ export default function HomePage() {
   const router = useRouter();
   const [hoverCard, setHoverCard] = useState<number | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeFeature, setActiveFeature] = useState(0);
 
   // Check auth status on mount
   useEffect(() => {
@@ -19,6 +20,14 @@ export default function HomePage() {
     const authenticated = authCookie?.split("=")[1] === "true";
     console.log("Homepage - Authenticated:", authenticated);
     setIsAuthenticated(authenticated);
+  }, []);
+
+  // Auto rotate features
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFeature((prev) => (prev + 1) % features.length);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCardHover = (index: number | null): void => {
@@ -58,6 +67,37 @@ export default function HomePage() {
       textColor: "text-white",
       path: "/admin/facilities",
     }
+  ];
+
+  const features = [
+    {
+      title: "Real-time Medicine Tracking",
+      description: "Monitor medicine stock levels across all facilities in real-time, with automatic alerts for low inventory.",
+      icon: <LineChart className="w-12 h-12 text-blue-500" />,
+      color: "bg-blue-50",
+      borderColor: "border-blue-200",
+    },
+    {
+      title: "Expiry Date Management",
+      description: "Never miss expiration dates with our advanced tracking system that provides timely notifications for upcoming expirations.",
+      icon: <Calendar className="w-12 h-12 text-red-500" />,
+      color: "bg-red-50",
+      borderColor: "border-red-200",
+    },
+    {
+      title: "Centralized Facility Management",
+      description: "Easily manage multiple healthcare facilities from a single dashboard with customized access controls.",
+      icon: <Building2 className="w-12 h-12 text-purple-500" />,
+      color: "bg-purple-50",
+      borderColor: "border-purple-200",
+    },
+    {
+      title: "Comprehensive Analytics",
+      description: "Gain insights into medicine usage patterns and optimize inventory with detailed analytics and reporting tools.",
+      icon: <BarChart className="w-12 h-12 text-green-500" />,
+      color: "bg-green-50",
+      borderColor: "border-green-200",
+    },
   ];
 
   return (
@@ -103,18 +143,54 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Login/Dashboard Button */}
-          <div className="mt-16 mb-8 flex justify-center">
-            <Button
-              onClick={() => router.push(isAuthenticated ? "/dashboard" : "/login")}
-              className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white px-8 py-4 text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center"
-            >
-              <span className="absolute right-full top-0 h-full w-12 bg-white/20 skew-x-12 transition-all group-hover:right-0 duration-700 z-0"></span>
-              <LogIn className="w-5 h-5 mr-3" />
-              <span className="relative z-10">
-                {isAuthenticated ? "Go to Dashboard" : "Login to Manage Medicines"}
-              </span>
-            </Button>
+          {/* Feature Spotlight Section */}
+          <div className="mt-16 mb-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800">Feature Spotlight</h2>
+              <p className="text-gray-600 mt-2">Discover how our system can transform your medicine management</p>
+            </div>
+            
+            <div className="relative">
+              {/* Feature Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8">
+                {features.map((feature, index) => (
+                  <button
+                    key={index}
+                    className={`text-left p-4 rounded-lg transition-all duration-300 border ${
+                      activeFeature === index 
+                        ? `${feature.color} ${feature.borderColor} shadow-md` 
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setActiveFeature(index)}
+                  >
+                    <h3 className="font-medium text-sm md:text-base truncate">{feature.title}</h3>
+                  </button>
+                ))}
+              </div>
+              
+              {/* Active Feature Detail */}
+              <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-100 transition-all duration-500">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                  <div className={`p-4 rounded-full ${features[activeFeature].color}`}>
+                    {features[activeFeature].icon}
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <h3 className="text-xl font-bold text-gray-800 mb-3">{features[activeFeature].title}</h3>
+                    <p className="text-gray-600">{features[activeFeature].description}</p>
+                    
+                    <div className="mt-6 flex flex-wrap justify-center md:justify-start gap-3">
+                      <Button 
+                        onClick={() => router.push(isAuthenticated ? "/dashboard" : "/login")}
+                        className="bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white"
+                      >
+                        Get Started
+                      </Button>
+                    
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Quick Stats Section */}

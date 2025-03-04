@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +16,25 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check if we're coming from a logout
+  useEffect(() => {
+    const logout = searchParams?.get('logout');
+    if (logout === 'true') {
+      // Make sure we're logged out by clearing any remaining auth data
+      document.cookie = "auth=; Max-Age=0; path=/";
+      document.cookie = "auth=; Max-Age=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      localStorage.removeItem("auth");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      sessionStorage.removeItem("auth");
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      
+      console.log("Login page - Cleared all auth data after logout");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
