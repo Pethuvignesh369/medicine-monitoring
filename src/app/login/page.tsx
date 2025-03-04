@@ -33,8 +33,7 @@ export default function LoginPage() {
 
       const { success } = await res.json();
       if (success) {
-        router.push("/dashboard");
-        router.refresh(); // Force refresh to update Navbar
+        window.location.href = "/dashboard"; // Hard redirect to ensure navbar reloads
       }
     } catch (err) {
       setError("Login failed. Please try again.");
@@ -168,7 +167,7 @@ export default function LoginPage() {
 
           <div className="text-center mt-6">
             <p className="text-xs text-gray-500">
-              © 2025 Animal Husbandry Department, Government of Tamil Nadu. All rights reserved.
+              © 2024 Animal Husbandry Department, Government of Tamil Nadu. All rights reserved.
             </p>
           </div>
         </motion.div>

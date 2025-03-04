@@ -38,27 +38,40 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Update the checkAuth function to be more robust
-  const checkAuth = () => {
+  // Check auth status via server endpoint
+  const checkAuth = async () => {
     try {
-      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split('=');
-        acc[key] = value;
-        return acc;
-      }, {} as { [key: string]: string });
-      
-      return cookies['auth'] === 'true';
+      const res = await fetch("/api/check-auth", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to check auth");
+      const { isAuthenticated } = await res.json();
+      console.log("Navbar checkAuth - Pathname:", pathname, "Server Auth:", isAuthenticated, "Time:", new Date().toISOString());
+      return isAuthenticated;
     } catch (error) {
-      console.error('Error checking auth:', error);
-      return false;
+      console.error("Error checking auth:", error);
+      return false; // Fallback to unauthenticated if server check fails
     }
   };
 
-  // Modify the useEffect hook for better auth state management
+  // Fallback to cookie check if server fails
+  const checkCookie = () => {
+    const cookies = document.cookie;
+    const authCookie = cookies.split("; ").find(row => row.startsWith("auth="));
+    const authenticated = authCookie?.split("=")[1] === "true";
+    console.log("Navbar checkCookie - Cookies:", cookies, "Auth Cookie:", authCookie, "Authenticated:", authenticated);
+    return authenticated;
+  };
+
+  // Update auth state on mount and route change
   useEffect(() => {
-    const updateAuth = () => {
-      const authenticated = checkAuth();
-      setIsAuthenticated(authenticated);
+    const updateAuth = async () => {
+      let authenticated = await checkAuth(); // Prefer server check
+      if (!authenticated) {
+        authenticated = checkCookie(); // Fallback to cookie
+      }
+      console.log("Navbar useEffect - Setting isAuthenticated to:", authenticated);
+      if (authenticated !== isAuthenticated) {
+        setIsAuthenticated(authenticated);
+      }
 
       if (authenticated) {
         fetchAlerts();
@@ -67,20 +80,15 @@ export default function Navbar() {
       }
     };
 
-    updateAuth();
+    updateAuth(); // Initial check
 
-    // Listen for storage events to handle auth changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'auth') {
-        updateAuth();
-      }
-    };
+    // Poll for auth change (max 10 seconds, every 500ms)
+    const interval = setInterval(updateAuth, 500);
+    const timeout = setTimeout(() => clearInterval(interval), 10000);
 
-    window.addEventListener('storage', handleStorageChange);
-
-    // Cleanup
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [pathname]);
 
@@ -108,21 +116,17 @@ export default function Navbar() {
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   };
 
-  // Update the handleLogout function
   const handleLogout = () => {
-    document.cookie = "auth=false; path=/; max-age=0";
-    localStorage.removeItem('auth'); // Clear local storage as well
+    console.log("Logging out...");
+    document.cookie = "auth=; Max-Age=0; path=/";
     setIsAuthenticated(false);
     setAlerts([]);
-    router.push('/login');
+    window.location.href = "/login"; // Hard redirect
   };
 
-  // Update the handleLogin function
   const handleLogin = () => {
-    document.cookie = "auth=true; path=/";
-    localStorage.setItem('auth', 'true');
-    setIsAuthenticated(true);
-    router.push('/dashboard');
+    console.log("Navigating to login...");
+    router.push("/login");
   };
 
   const navLinks = [
@@ -173,8 +177,8 @@ export default function Navbar() {
 
           {/* Notification Bell, Login/Logout, and Mobile Menu Button */}
           <div className="flex items-center space-x-4">
-            {/* Debug Indicator (remove for production) */}
-            <div className="hidden text-xs bg-white/10 px-2 py-1 rounded">
+            {/* Debug Indicator */}
+            <div className="text-xs bg-white/10 px-2 py-1 rounded">
               {isAuthenticated ? "Logged In" : "Not Logged In"}
             </div>
 
@@ -204,15 +208,15 @@ export default function Navbar() {
               aria-label={isAuthenticated ? "Logout" : "Login"}
             >
               {isAuthenticated ? (
-                <div className="flex items-center">
+                <>
                   <LogOut className="w-5 h-5" />
-                  <span className="ml-2 hidden md:inline">Logout</span>
-                </div>
+                  <span className="ml-2 sr-only md:not-sr-only">Logout</span>
+                </>
               ) : (
-                <div className="flex items-center">
+                <>
                   <LogIn className="w-5 h-5" />
-                  <span className="ml-2 hidden md:inline">Login</span>
-                </div>
+                  <span className="ml-2 sr-only md:not-sr-only">Login</span>
+                </>
               )}
             </Button>
 
