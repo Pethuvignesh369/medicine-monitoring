@@ -19,7 +19,7 @@ interface Facility {
   type: string;
 }
 
-export default function AddFacility() {
+export default function AddFacilityComponent() {
   const [facility, setFacility] = useState<Facility>({ name: "", type: "" });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,8 +40,6 @@ export default function AddFacility() {
       return;
     }
 
-    console.log("Submitting:", facility);
-
     try {
       const res = await fetch("/api/facilities", {
         method: "POST",
@@ -57,7 +55,7 @@ export default function AddFacility() {
       setSuccessMessage("Facility added successfully!");
       setTimeout(() => {
         setSuccessMessage(null);
-        router.push("/admin/facilities");
+        router.push("/admin/facilities/view");
       }, ALERT_TIMEOUT);
       setFacility({ name: "", type: "" });
     } catch (error) {
@@ -69,9 +67,8 @@ export default function AddFacility() {
   };
 
   const handleCancel = () => {
-    console.log("Cancel clicked, isSubmitting:", isSubmitting);
     if (!isSubmitting) {
-      router.push("/dashboard"); // Changed from "/admin/facilities" to "/dashboard"
+      router.push("/admin/facilities/view");
     }
   };
 

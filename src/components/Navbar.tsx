@@ -133,7 +133,7 @@ export default function Navbar() {
     { path: "/", label: "Home", icon: <Home className="w-5 h-5" /> },
     { path: "/dashboard", label: "Dashboard", icon: <BarChart2 className="w-5 h-5" /> },
     { path: "/dashboard/add", label: "Add Medicine", icon: <PlusCircle className="w-5 h-5" /> },
-    { path: "/admin/facilities", label: "Facilities", icon: <Building className="w-5 h-5" /> },
+    { path: "/admin/facilities/view", label: "Facilities", icon: <Building className="w-5 h-5" /> },
   ];
 
   return (

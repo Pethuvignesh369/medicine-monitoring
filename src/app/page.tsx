@@ -1,17 +1,17 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect } from "react"; // Added useEffect
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, LogIn, Package, AlertTriangle, Clock } from "lucide-react";
+import { PlusCircle, LayoutDashboard, Building2, Bell, TrendingUp, Calendar, Search, LogIn, Package, AlertTriangle, Clock, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 
 export default function HomePage() {
   const router = useRouter();
   const [hoverCard, setHoverCard] = useState<number | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Added auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Check auth status on mount
   useEffect(() => {
@@ -43,13 +43,21 @@ export default function HomePage() {
       path: "/dashboard",
     },
     {
+      title: "View Facilities",
+      description: "View and manage all healthcare facilities in the system.",
+      icon: <Eye className="w-8 h-8" />,
+      color: "bg-gradient-to-br from-indigo-400 to-indigo-600",
+      textColor: "text-white",
+      path: "/admin/facilities/view",
+    },
+    {
       title: "Add Facility",
-      description: "Add or manage healthcare facilities in the system.",
+      description: "Add a new healthcare facility to the system.",
       icon: <Building2 className="w-8 h-8" />,
       color: "bg-gradient-to-br from-purple-400 to-purple-600",
       textColor: "text-white",
       path: "/admin/facilities",
-    },
+    }
   ];
 
   return (
@@ -67,7 +75,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
             {cards.map((card, index) => (
               <div 
                 key={index}

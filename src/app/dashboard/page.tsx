@@ -406,7 +406,7 @@ export default function VeterinaryMedicineDashboard() {
             <nav className="space-y-1 px-3">
               {/* Facilities */}
               <Link
-                href="/admin/facilities"
+                href="/admin/facilities/view"
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group relative",
                   pathname === "/admin/facilities" 
