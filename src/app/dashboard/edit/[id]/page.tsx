@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown, Calendar, ArrowLeft, Pill, Package, Clock, Building, Edit2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
 const ALERT_TIMEOUT = 3000;
 
@@ -20,43 +19,181 @@ interface Facility {
   type: string;
 }
 
-interface Medicine {
-  name: string;
-  stock: string;
-  weeklyRequirement: string;
-  expiryDate: string;
-  facilityId: string;
-}
+// Memoized IconInput component
+const IconInput = memo(({ 
+  id, 
+  placeholder, 
+  value, 
+  onChange, 
+  type = "text", 
+  icon: Icon, 
+  min
+}: {
+  id: string;
+  placeholder: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  icon: any;
+  min?: string;
+}) => (
+  <div className="relative group">
+    <div className="absolute left-3 top-2.5 hidden sm:block">
+      <Icon className="h-5 w-5 text-gray-400" />
+    </div>
+    <div className="absolute left-3 top-2.5 sm:hidden">
+      <Icon className="h-4 w-4 text-gray-400" />
+    </div>
+    <Input
+      id={id}
+      type={type}
+      placeholder={placeholder}
+      className="sm:pl-10 pl-9 bg-gray-50 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+      value={value}
+      onChange={onChange}
+      min={min}
+    />
+  </div>
+));
+
+IconInput.displayName = "IconInput";
+
+// Memoized status indicator component
+const StockStatusIndicator = memo(({ stock, weeklyRequirement }: { stock: string, weeklyRequirement: string }) => {
+  if (!stock || !weeklyRequirement) return null;
+  
+  const stockNum = parseInt(stock);
+  const reqNum = parseInt(weeklyRequirement);
+  const weeksLeft = stockNum / reqNum;
+  
+  const getStatusColor = () => {
+    if (weeksLeft < 1) return "bg-red-400";
+    if (weeksLeft < 2) return "bg-orange-400";
+    if (weeksLeft < 4) return "bg-yellow-400";
+    return "bg-green-400";
+  };
+
+  const getStatusText = () => {
+    if (weeksLeft < 1) return "Critical";
+    if (weeksLeft < 2) return "Low";
+    if (weeksLeft < 4) return "Moderate";
+    return "Good";
+  };
+
+  return (
+    <div className="mt-3 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Current Stock Status:</p>
+      <div className="flex items-center">
+        <div className={`w-3 h-3 rounded-full mr-2 ${getStatusColor()}`}></div>
+        <span className="font-medium text-sm">{getStatusText()}</span>
+        <span className="ml-2 text-xs text-gray-500">
+          ({weeksLeft.toFixed(1)} weeks of supply)
+        </span>
+      </div>
+    </div>
+  );
+});
+
+StockStatusIndicator.displayName = "StockStatusIndicator";
+
+// Memoized alert component
+const StatusAlert = memo(({ 
+  successMessage, 
+  errorMessage 
+}: { 
+  successMessage: string | null, 
+  errorMessage: string | null 
+}) => {
+  if (!successMessage && !errorMessage) return null;
+  
+  return (
+    <div className="mb-6">
+      {successMessage && (
+        <Alert className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 text-green-700 shadow-md rounded-lg">
+          <div className="flex items-center">
+            <div className="bg-green-100 p-2 rounded-full mr-3">
+              <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+            </div>
+            <div>
+              <AlertTitle className="font-semibold text-green-800 text-sm sm:text-base">Success</AlertTitle>
+              <AlertDescription className="text-sm">{successMessage}</AlertDescription>
+            </div>
+          </div>
+        </Alert>
+      )}
+      {errorMessage && (
+        <Alert className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 shadow-md rounded-lg">
+          <AlertTitle className="font-semibold text-red-800 text-sm sm:text-base">Error</AlertTitle>
+          <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+});
+
+StatusAlert.displayName = "StatusAlert";
 
 export default function EditMedicine() {
-  const [medicine, setMedicine] = useState<Medicine>({
-    name: "",
-    stock: "",
-    weeklyRequirement: "",
-    expiryDate: "",
-    facilityId: "",
-  });
+  // Form state - individual state variables for better performance
+  const [name, setName] = useState("");
+  const [stock, setStock] = useState("");
+  const [weeklyRequirement, setWeeklyRequirement] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [facilityId, setFacilityId] = useState("");
+  
+  // UI state
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
 
+  // Memoized change handlers
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+  }, []);
+  
+  const handleStockChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setStock(e.target.value);
+  }, []);
+  
+  const handleWeeklyRequirementChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setWeeklyRequirement(e.target.value);
+  }, []);
+  
+  const handleExpiryDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setExpiryDate(e.target.value);
+  }, []);
+
+  // Get selected facility name - memoized
+  const selectedFacilityName = useCallback(() => {
+    if (!facilityId) return "Select Facility";
+    const facility = facilities.find(f => f.id === parseInt(facilityId));
+    return facility?.name || "Select Facility";
+  }, [facilityId, facilities]);
+
+  // Navigation handler - memoized
+  const handleNavigateBack = useCallback(() => {
+    router.push("/dashboard");
+  }, [router]);
+
+  // Fetch medicine and facilities on component mount
   useEffect(() => {
     const fetchMedicine = async () => {
       try {
         const res = await fetch(`/api/medicines/${id}`);
         if (!res.ok) throw new Error("Failed to fetch medicine");
         const data = await res.json();
-        setMedicine({
-          name: data.name,
-          stock: data.stock.toString(),
-          weeklyRequirement: data.weeklyRequirement.toString(),
-          expiryDate: data.expiryDate ? data.expiryDate.split("T")[0] : "",
-          facilityId: data.facility.id.toString(),
-        });
+        
+        // Set individual state variables
+        setName(data.name);
+        setStock(data.stock.toString());
+        setWeeklyRequirement(data.weeklyRequirement.toString());
+        setExpiryDate(data.expiryDate ? data.expiryDate.split("T")[0] : "");
+        setFacilityId(data.facility.id.toString());
       } catch (error) {
         setErrorMessage("Failed to load medicine data.");
         setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
@@ -80,11 +217,12 @@ export default function EditMedicine() {
     fetchFacilities();
   }, [id]);
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!medicine.name || !medicine.stock || !medicine.weeklyRequirement || !medicine.facilityId) {
+    if (!name || !stock || !weeklyRequirement || !facilityId) {
       setErrorMessage("Please fill all required fields.");
       setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
       setIsSubmitting(false);
@@ -96,11 +234,11 @@ export default function EditMedicine() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: medicine.name,
-          stock: parseInt(medicine.stock),
-          weeklyRequirement: parseInt(medicine.weeklyRequirement),
-          expiryDate: medicine.expiryDate || null,
-          facilityId: parseInt(medicine.facilityId),
+          name,
+          stock: parseInt(stock),
+          weeklyRequirement: parseInt(weeklyRequirement),
+          expiryDate: expiryDate || null,
+          facilityId: parseInt(facilityId),
         }),
       });
 
@@ -119,66 +257,6 @@ export default function EditMedicine() {
     }
   };
 
-  const getStatusColor = () => {
-    if (!medicine.stock || !medicine.weeklyRequirement) return "bg-gray-200";
-    const stock = parseInt(medicine.stock);
-    const requirement = parseInt(medicine.weeklyRequirement);
-    const weeksLeft = stock / requirement;
-    
-    if (weeksLeft < 1) return "bg-red-400";
-    if (weeksLeft < 2) return "bg-orange-400";
-    if (weeksLeft < 4) return "bg-yellow-400";
-    return "bg-green-400";
-  };
-
-  const calculateStatus = () => {
-    if (!medicine.stock || !medicine.weeklyRequirement) return "Unknown";
-    const stock = parseInt(medicine.stock);
-    const requirement = parseInt(medicine.weeklyRequirement);
-    const weeksLeft = stock / requirement;
-    
-    if (weeksLeft < 1) return "Critical";
-    if (weeksLeft < 2) return "Low";
-    if (weeksLeft < 4) return "Moderate";
-    return "Good";
-  };
-
-  const IconInput = ({ 
-    id, 
-    placeholder, 
-    value, 
-    onChange, 
-    type = "text", 
-    icon: Icon, 
-    min
-  }: {
-    id: string;
-    placeholder: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    type?: string;
-    icon: any;
-    min?: string;
-  }) => (
-    <div className="relative group">
-      <div className="absolute left-3 top-2.5 hidden sm:block">
-        <Icon className="h-5 w-5 text-gray-400" />
-      </div>
-      <div className="absolute left-3 top-2.5 sm:hidden">
-        <Icon className="h-4 w-4 text-gray-400" />
-      </div>
-      <Input
-        id={id}
-        type={type}
-        placeholder={placeholder}
-        className="sm:pl-10 pl-9 bg-gray-50 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-        value={value}
-        onChange={onChange}
-        min={min}
-      />
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <Navbar />
@@ -188,44 +266,14 @@ export default function EditMedicine() {
             <Button 
               variant="ghost" 
               className="p-1 sm:p-2 mr-2" 
-              onClick={() => router.push("/dashboard")}
+              onClick={handleNavigateBack}
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
             </Button>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Edit Medicine</h1>
           </div>
 
-          <AnimatePresence>
-            {(successMessage || errorMessage) && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mb-6"
-              >
-                {successMessage && (
-                  <Alert className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 text-green-700 shadow-md rounded-lg">
-                    <div className="flex items-center">
-                      <div className="bg-green-100 p-2 rounded-full mr-3">
-                        <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <AlertTitle className="font-semibold text-green-800 text-sm sm:text-base">Success</AlertTitle>
-                        <AlertDescription className="text-sm">{successMessage}</AlertDescription>
-                      </div>
-                    </div>
-                  </Alert>
-                )}
-                {errorMessage && (
-                  <Alert className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 shadow-md rounded-lg">
-                    <AlertTitle className="font-semibold text-red-800 text-sm sm:text-base">Error</AlertTitle>
-                    <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
-                  </Alert>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <StatusAlert successMessage={successMessage} errorMessage={errorMessage} />
 
           <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
             <div className="p-4 sm:p-6 bg-gradient-to-r from-blue-600 to-teal-500 text-white">
@@ -246,8 +294,8 @@ export default function EditMedicine() {
                   <IconInput 
                     id="name"
                     placeholder="Enter medicine name"
-                    value={medicine.name}
-                    onChange={(e) => setMedicine({ ...medicine, name: e.target.value })}
+                    value={name}
+                    onChange={handleNameChange}
                     icon={Pill}
                   />
                 </div>
@@ -261,8 +309,8 @@ export default function EditMedicine() {
                     id="stock"
                     type="number"
                     placeholder="Enter stock quantity"
-                    value={medicine.stock}
-                    onChange={(e) => setMedicine({ ...medicine, stock: e.target.value })}
+                    value={stock}
+                    onChange={handleStockChange}
                     min="0"
                     icon={Package}
                   />
@@ -277,8 +325,8 @@ export default function EditMedicine() {
                     id="weeklyRequirement"
                     type="number"
                     placeholder="Enter weekly requirement"
-                    value={medicine.weeklyRequirement}
-                    onChange={(e) => setMedicine({ ...medicine, weeklyRequirement: e.target.value })}
+                    value={weeklyRequirement}
+                    onChange={handleWeeklyRequirementChange}
                     min="0"
                     icon={Clock}
                   />
@@ -293,8 +341,8 @@ export default function EditMedicine() {
                     id="expiryDate"
                     type="date"
                     placeholder="Select expiry date"
-                    value={medicine.expiryDate}
-                    onChange={(e) => setMedicine({ ...medicine, expiryDate: e.target.value })}
+                    value={expiryDate}
+                    onChange={handleExpiryDateChange}
                     icon={Calendar}
                   />
                 </div>
@@ -316,9 +364,7 @@ export default function EditMedicine() {
                         <div className="flex items-center text-left overflow-hidden">
                           <Building className="flex-shrink-0 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                           <span className="truncate text-sm">
-                            {medicine.facilityId
-                              ? facilities.find((f) => f.id === parseInt(medicine.facilityId))?.name
-                              : "Select Facility"}
+                            {selectedFacilityName()}
                           </span>
                         </div>
                         <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -335,10 +381,7 @@ export default function EditMedicine() {
                               value={`${facility.name} (${facility.type})`}
                               className="py-2 px-3 cursor-pointer"
                               onSelect={() => {
-                                setMedicine({
-                                  ...medicine,
-                                  facilityId: facility.id.toString(),
-                                });
+                                setFacilityId(facility.id.toString());
                                 setOpen(false);
                               }}
                             >
@@ -346,7 +389,7 @@ export default function EditMedicine() {
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    medicine.facilityId === facility.id.toString() ? "text-blue-600" : "opacity-0"
+                                    facilityId === facility.id.toString() ? "text-blue-600" : "opacity-0"
                                   )}
                                 />
                                 <div>
@@ -364,17 +407,8 @@ export default function EditMedicine() {
               </div>
 
               {/* Stock Status Indicator */}
-              {medicine.stock && medicine.weeklyRequirement && (
-                <div className="mt-3 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Current Stock Status:</p>
-                  <div className="flex items-center">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${getStatusColor()}`}></div>
-                    <span className="font-medium text-sm">{calculateStatus()}</span>
-                    <span className="ml-2 text-xs text-gray-500">
-                      ({(parseInt(medicine.stock) / parseInt(medicine.weeklyRequirement)).toFixed(1)} weeks of supply)
-                    </span>
-                  </div>
-                </div>
+              {stock && weeklyRequirement && (
+                <StockStatusIndicator stock={stock} weeklyRequirement={weeklyRequirement} />
               )}
 
               <div className="flex gap-3 sm:gap-4 pt-2 sm:pt-4">
@@ -382,7 +416,7 @@ export default function EditMedicine() {
                   type="button" 
                   variant="outline" 
                   className="flex-1 border-gray-300 hover:bg-gray-100 text-gray-700 text-xs sm:text-sm h-10" 
-                  onClick={() => router.push("/dashboard")}
+                  onClick={handleNavigateBack}
                   disabled={isSubmitting}
                 >
                   Cancel

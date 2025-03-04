@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,88 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown, ArrowLeft, Building, Home, PlusCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
 const ALERT_TIMEOUT = 3000;
 
-interface Facility {
-  name: string;
-  type: string;
-}
+// Memoized IconInput component
+const IconInput = memo(({ 
+  id, 
+  placeholder, 
+  value, 
+  onChange, 
+  type = "text", 
+  icon: Icon
+}: {
+  id: string;
+  placeholder: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  icon: any;
+}) => (
+  <div className="relative group">
+    <div className="absolute left-3 top-2.5 hidden sm:block">
+      <Icon className="h-5 w-5 text-gray-400" />
+    </div>
+    <div className="absolute left-3 top-2.5 sm:hidden">
+      <Icon className="h-4 w-4 text-gray-400" />
+    </div>
+    <Input
+      id={id}
+      type={type}
+      placeholder={placeholder}
+      className="sm:pl-10 pl-9 bg-gray-50 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+      value={value}
+      onChange={onChange}
+    />
+  </div>
+));
+
+IconInput.displayName = "IconInput";
+
+// Memoized alert component
+const StatusAlert = memo(({ 
+  successMessage, 
+  errorMessage 
+}: { 
+  successMessage: string | null, 
+  errorMessage: string | null 
+}) => {
+  if (!successMessage && !errorMessage) return null;
+  
+  return (
+    <div className="mb-6">
+      {successMessage && (
+        <Alert className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 text-green-700 shadow-md rounded-lg">
+          <div className="flex items-center">
+            <div className="bg-green-100 p-2 rounded-full mr-3">
+              <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+            </div>
+            <div>
+              <AlertTitle className="font-semibold text-green-800 text-sm sm:text-base">Success</AlertTitle>
+              <AlertDescription className="text-sm">{successMessage}</AlertDescription>
+            </div>
+          </div>
+        </Alert>
+      )}
+      {errorMessage && (
+        <Alert className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 shadow-md rounded-lg">
+          <AlertTitle className="font-semibold text-red-800 text-sm sm:text-base">Error</AlertTitle>
+          <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+});
+
+StatusAlert.displayName = "StatusAlert";
 
 export default function AddFacilityComponent() {
-  const [facility, setFacility] = useState<Facility>({ name: "", type: "" });
+  // Individual state variables instead of a nested object
+  const [facilityName, setFacilityName] = useState("");
+  const [facilityType, setFacilityType] = useState("");
+  
+  // UI state
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,11 +100,22 @@ export default function AddFacilityComponent() {
 
   const facilityTypes = ["Dispensary", "Hospital", "ClinicianCenter", "Polyclinic"];
 
+  // Memoized event handlers
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFacilityName(e.target.value);
+  }, []);
+
+  const handleNavigateBack = useCallback(() => {
+    if (!isSubmitting) {
+      router.push("/admin/facilities/view");
+    }
+  }, [isSubmitting, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!facility.name || !facility.type) {
+    if (!facilityName || !facilityType) {
       setErrorMessage("Please enter a name and select a type.");
       setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
       setIsSubmitting(false);
@@ -44,7 +126,10 @@ export default function AddFacilityComponent() {
       const res = await fetch("/api/facilities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(facility),
+        body: JSON.stringify({
+          name: facilityName,
+          type: facilityType
+        }),
       });
 
       if (!res.ok) {
@@ -57,7 +142,10 @@ export default function AddFacilityComponent() {
         setSuccessMessage(null);
         router.push("/admin/facilities/view");
       }, ALERT_TIMEOUT);
-      setFacility({ name: "", type: "" });
+      
+      // Reset form
+      setFacilityName("");
+      setFacilityType("");
     } catch (error) {
       setErrorMessage("Failed to add facility.");
       setTimeout(() => setErrorMessage(null), ALERT_TIMEOUT);
@@ -65,45 +153,6 @@ export default function AddFacilityComponent() {
       setIsSubmitting(false);
     }
   };
-
-  const handleCancel = () => {
-    if (!isSubmitting) {
-      router.push("/admin/facilities/view");
-    }
-  };
-
-  const IconInput = ({ 
-    id, 
-    placeholder, 
-    value, 
-    onChange, 
-    type = "text", 
-    icon: Icon
-  }: {
-    id: string;
-    placeholder: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    type?: string;
-    icon: any;
-  }) => (
-    <div className="relative group">
-      <div className="absolute left-3 top-2.5 hidden sm:block">
-        <Icon className="h-5 w-5 text-gray-400" />
-      </div>
-      <div className="absolute left-3 top-2.5 sm:hidden">
-        <Icon className="h-4 w-4 text-gray-400" />
-      </div>
-      <Input
-        id={id}
-        type={type}
-        placeholder={placeholder}
-        className="sm:pl-10 pl-9 bg-gray-50 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-        value={value}
-        onChange={onChange}
-      />
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -114,44 +163,14 @@ export default function AddFacilityComponent() {
             <Button 
               variant="ghost" 
               className="p-1 sm:p-2 mr-2" 
-              onClick={handleCancel}
+              onClick={handleNavigateBack}
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
             </Button>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Add New Facility</h1>
           </div>
 
-          <AnimatePresence>
-            {(successMessage || errorMessage) && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mb-6"
-              >
-                {successMessage && (
-                  <Alert className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 text-green-700 shadow-md rounded-lg">
-                    <div className="flex items-center">
-                      <div className="bg-green-100 p-2 rounded-full mr-3">
-                        <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <AlertTitle className="font-semibold text-green-800 text-sm sm:text-base">Success</AlertTitle>
-                        <AlertDescription className="text-sm">{successMessage}</AlertDescription>
-                      </div>
-                    </div>
-                  </Alert>
-                )}
-                {errorMessage && (
-                  <Alert className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 shadow-md rounded-lg">
-                    <AlertTitle className="font-semibold text-red-800 text-sm sm:text-base">Error</AlertTitle>
-                    <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
-                  </Alert>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <StatusAlert successMessage={successMessage} errorMessage={errorMessage} />
 
           <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
             <div className="p-4 sm:p-6 bg-gradient-to-r from-blue-600 to-teal-500 text-white">
@@ -172,8 +191,8 @@ export default function AddFacilityComponent() {
                   <IconInput 
                     id="facilityName"
                     placeholder="e.g., Chennai Veterinary Dispensary"
-                    value={facility.name}
-                    onChange={(e) => setFacility({ ...facility, name: e.target.value })}
+                    value={facilityName}
+                    onChange={handleNameChange}
                     icon={Building}
                   />
                 </div>
@@ -195,7 +214,7 @@ export default function AddFacilityComponent() {
                         <div className="flex items-center text-left overflow-hidden">
                           <Home className="flex-shrink-0 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                           <span className="truncate text-sm">
-                            {facility.type || "Select Facility Type"}
+                            {facilityType || "Select Facility Type"}
                           </span>
                         </div>
                         <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -212,7 +231,7 @@ export default function AddFacilityComponent() {
                               value={type}
                               className="py-2 px-3 cursor-pointer"
                               onSelect={() => {
-                                setFacility({ ...facility, type });
+                                setFacilityType(type);
                                 setOpen(false);
                               }}
                             >
@@ -220,7 +239,7 @@ export default function AddFacilityComponent() {
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    facility.type === type ? "text-blue-600" : "opacity-0"
+                                    facilityType === type ? "text-blue-600" : "opacity-0"
                                   )}
                                 />
                                 <p className="font-medium text-sm">{type}</p>
@@ -239,7 +258,7 @@ export default function AddFacilityComponent() {
                   type="button" 
                   variant="outline" 
                   className="flex-1 border-gray-300 hover:bg-gray-100 text-gray-700 text-xs sm:text-sm h-10" 
-                  onClick={handleCancel}
+                  onClick={handleNavigateBack}
                   disabled={isSubmitting}
                 >
                   Cancel
