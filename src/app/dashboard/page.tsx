@@ -54,6 +54,7 @@ export default function VeterinaryMedicineDashboard() {
   const [usageInputs, setUsageInputs] = useState<{ [key: number]: string }>({});
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -167,11 +168,23 @@ export default function VeterinaryMedicineDashboard() {
     XLSX.writeFile(workbook, `veterinary_medicine_inventory_${getTimestamp()}.xlsx`);
   }, [medicines, facilityFilter]);
 
+  // Fixed delete handler with better error handling and response processing
   const handleDelete = useCallback(async () => {
     if (deleteId === null) return;
     setLoading(true);
+    setDeleteError(null);
+    
     try {
-      const res = await fetch(`/api/medicines/${deleteId}`, { method: "DELETE" });
+      const res = await fetch(`/api/medicines/${deleteId}`, { 
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      
+      // Parse the response to get more detailed error messages
+      const data = await res.json();
+      
       if (res.ok) {
         setMedicines(prev => prev.filter(med => med.id !== deleteId));
         setSuccessMessage("Medicine removed successfully!");
@@ -179,10 +192,13 @@ export default function VeterinaryMedicineDashboard() {
         setIsModalOpen(false);
         setDeleteId(null);
       } else {
-        throw new Error("Failed to delete");
+        // Use the error message from the server if available
+        throw new Error(data.error || "Failed to delete medicine");
       }
     } catch (error) {
-      alert("Failed to remove the medicine. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to remove the medicine";
+      setDeleteError(errorMessage);
+      console.error("Delete error:", error);
     } finally {
       setLoading(false);
     }
@@ -868,7 +884,10 @@ export default function VeterinaryMedicineDashboard() {
                 open={isModalOpen} 
                 onOpenChange={(open) => {
                   setIsModalOpen(open);
-                  if (!open) setDeleteId(null);
+                  if (!open) {
+                    setDeleteId(null);
+                    setDeleteError(null); // Clear any error when closing
+                  }
                 }}
               >
                 <DialogContent>
@@ -876,18 +895,38 @@ export default function VeterinaryMedicineDashboard() {
                     <DialogTitle>Confirm Delete</DialogTitle>
                   </DialogHeader>
                   <p>Are you sure you want to remove this veterinary medicine? This action cannot be undone.</p>
+                  
+                  {deleteError && (
+                    <Alert className="mt-2 bg-red-100 border-l-4 border-red-500 text-red-700">
+                      <AlertTitle>Error</AlertTitle>
+                      <AlertDescription>{deleteError}</AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <DialogFooter className="mt-4 flex justify-end space-x-2">
                     <Button 
                       variant="outline" 
                       onClick={() => {
                         setIsModalOpen(false);
                         setDeleteId(null);
+                        setDeleteError(null);
                       }}
                     >
                       Cancel
                     </Button>
-                    <Button variant="destructive" onClick={handleDelete}>
-                      Delete
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleDelete}
+                      disabled={loading} // Disable the button during loading state
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        "Delete"
+                      )}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
