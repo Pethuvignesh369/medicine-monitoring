@@ -108,9 +108,10 @@ export default function EditFacility() {
     setFacilityName(e.target.value);
   }, []);
 
-  // Memoized navigation handler
+  // Memoized navigation handler with absolute path
   const handleNavigateBack = useCallback(() => {
-    router.push("/admin/facilities/view");
+    // Using replace instead of push to avoid history stacking issues
+    router.replace("/admin/facilities/view");
   }, [router]);
 
   // Fetch facility data
@@ -162,7 +163,7 @@ export default function EditFacility() {
       setSuccessMessage("Facility updated successfully!");
       setTimeout(() => {
         setSuccessMessage(null);
-        router.push("/admin/facilities/view");
+        router.replace("/admin/facilities/view");
       }, ALERT_TIMEOUT);
     } catch (error) {
       setErrorMessage("Failed to update facility.");
@@ -192,11 +193,11 @@ export default function EditFacility() {
       <Navbar />
       <div className="pt-24 px-4 pb-8">
         <div className="max-w-xl mx-auto">
-          <div className="mb-6 flex items-center">
+                      <div className="mb-6 flex items-center">
             <Button 
               variant="ghost" 
               className="p-1 sm:p-2 mr-2" 
-              onClick={handleNavigateBack}
+              onClick={() => router.replace("/admin/facilities/view")}
             >
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
             </Button>
@@ -291,7 +292,7 @@ export default function EditFacility() {
                   type="button" 
                   variant="outline" 
                   className="flex-1 border-gray-300 hover:bg-gray-100 text-gray-700 text-xs sm:text-sm h-10" 
-                  onClick={handleNavigateBack}
+                  onClick={() => router.replace("/admin/facilities/view")}
                   disabled={isSubmitting}
                 >
                   Cancel
