@@ -36,13 +36,18 @@ function validateIdParam(id: string) {
   return { valid: true, value: parseInt(id, 10) };
 }
 
+// Following Next.js 15 route handler format with async params
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await the params as required in Next.js 15
+    const params = await context.params;
+    const id = params.id;
+    
     // Validate and parse the ID parameter
-    const validatedId = validateIdParam(params.id);
+    const validatedId = validateIdParam(id);
     if (!validatedId.valid) {
       return NextResponse.json(
         { error: validatedId.error },
@@ -75,11 +80,15 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await the params as required in Next.js 15
+    const params = await context.params;
+    const id = params.id;
+    
     // Validate and parse the ID parameter
-    const validatedId = validateIdParam(params.id);
+    const validatedId = validateIdParam(id);
     if (!validatedId.valid) {
       return NextResponse.json(
         { error: validatedId.error },
@@ -140,11 +149,15 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await the params as required in Next.js 15
+    const params = await context.params;
+    const id = params.id;
+    
     // Validate and parse the ID parameter
-    const validatedId = validateIdParam(params.id);
+    const validatedId = validateIdParam(id);
     if (!validatedId.valid) {
       return NextResponse.json(
         { error: validatedId.error },
@@ -167,7 +180,6 @@ export async function DELETE(
     }
 
     // Check for and delete related usage records
-    // Note: We're checking for usage records directly rather than including them in the medicine query
     const usageCount = await prisma.medicineUsage.count({
       where: { medicineId }
     });
